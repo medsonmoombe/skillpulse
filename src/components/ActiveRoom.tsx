@@ -1,0 +1,36 @@
+"use client";
+
+import { useState } from "react";
+import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
+import { RoomToolbar } from "./RoomToolbar";
+
+interface ActiveRoomProps {
+  roomId: string;
+  livekitRoomId: string;
+  currentUserId: string;
+  isHost: boolean;
+  admittedUsers: { id: string; name: string | null }[];
+}
+
+export function ActiveRoom({ roomId, livekitRoomId, currentUserId, isHost, admittedUsers }: ActiveRoomProps) {
+  const [showBoardControl, setShowBoardControl] = useState(false);
+
+  return (
+    <div className="absolute inset-0 bg-white">
+      <ExcalidrawCanvas
+        roomId={roomId}
+        currentUserId={currentUserId}
+        isHost={isHost}
+        admittedUsers={admittedUsers}
+        showBoardControl={showBoardControl}
+      />
+      <RoomToolbar
+        livekitRoomId={livekitRoomId}
+        roomId={roomId}
+        isHost={isHost}
+        showBoardControl={showBoardControl}
+        onBoardControlToggle={() => setShowBoardControl(p => !p)}
+      />
+    </div>
+  );
+}
