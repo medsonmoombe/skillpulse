@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useStorage, useMutation } from "@liveblocks/react/suspense";
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types/excalidraw/types";
 
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
@@ -19,7 +18,7 @@ interface ExcalidrawAppProps {
 }
 
 export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
-  const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
+  const apiRef = useRef<any>(null);
   const lastSentRef = useRef<string>("");
 
   const elements = useStorage((root) => (root.excalidrawState as any)?.elements ?? []);
