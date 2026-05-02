@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { rooms, roomBookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/currentUser";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { NotificationService } from "@/services/notification-service";
 
@@ -45,16 +45,18 @@ export async function bookRoom(formData: FormData) {
       title: "New Booking",
       message: `${user.displayName} reserved a spot in "${room.title}".`,
       type: "booking",
+      entityType: "room",
       entityId: roomId,
+      actionUrl: `/dashboard/room/${roomId}`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Ignore unique violation (user already booked)
-    if (error.code === "23505") {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
       console.log("User already booked this room.");
     } else {
       throw error;
     }
   }
 
-  revalidatePath(`/dashboard/rooms/${roomId}`); // Refresh UI
+  revalidatePath(`/dashboard/room/${roomId}`); // Refresh UI
 }

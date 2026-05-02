@@ -38,7 +38,9 @@ export async function admitUser(formData: FormData) {
       title: "You've been admitted!",
       message: `You've been admitted to the session.`,
       type: "admit",
+      entityType: "room",
       entityId: roomId,
+      actionUrl: `/dashboard/room/${roomId}`,
     });
   }
 

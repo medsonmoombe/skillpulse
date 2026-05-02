@@ -8,6 +8,7 @@ interface LiveRoomBoardProps {
   roomId: string;
   livekitRoomId: string;
   currentUserId: string;
+  currentUserName: string;
   isHost: boolean;
   admittedUsers: { id: string; name: string | null }[];
 }
@@ -16,6 +17,7 @@ export function LiveRoomBoard({
   roomId,
   livekitRoomId,
   currentUserId,
+  currentUserName,
   isHost,
   admittedUsers,
 }: LiveRoomBoardProps) {
@@ -26,6 +28,7 @@ export function LiveRoomBoard({
       <ExcalidrawCanvas
         roomId={roomId}
         currentUserId={currentUserId}
+        currentUserName={currentUserName}
         isHost={isHost}
         admittedUsers={admittedUsers}
         showBoardControl={showBoardControl}

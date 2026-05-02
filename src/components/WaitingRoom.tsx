@@ -3,8 +3,31 @@
 
 import { bookRoom } from "@/app/actions/booking";
 import { activateRoom } from "@/app/actions/roomUtils";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
+import { useActionToast } from "@/lib/use-action-toast";
+
+type ActionState = { success?: boolean; message?: string } | null;
+
+async function bookRoomAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await bookRoom(formData);
+    return { success: true, message: "Your spot has been reserved." };
+  } catch (error: any) {
+    return { success: false, message: error?.message ?? "Could not reserve your spot." };
+  }
+}
+
+async function activateRoomAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await activateRoom(formData);
+    return null;
+  } catch (error: any) {
+    if (error?.digest?.startsWith("NEXT_REDIRECT")) throw error;
+    return { success: false, message: error?.message ?? "Could not start the session." };
+  }
+}
 
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
@@ -32,6 +55,10 @@ interface WaitingRoomProps {
 
 export function WaitingRoom({ title, startsAt, isHost, roomId, currentBookings, maxParticipants, hasBooked }: WaitingRoomProps) {
   const isFull = currentBookings >= maxParticipants;
+  const [bookingState, bookingAction] = useActionState(bookRoomAction, null);
+  const [activationState, activationAction] = useActionState(activateRoomAction, null);
+  useActionToast(bookingState);
+  useActionToast(activationState);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 p-8 text-center">
@@ -64,7 +91,7 @@ export function WaitingRoom({ title, startsAt, isHost, roomId, currentBookings, 
 
         {/* Actions */}
         {isHost ? (
-          <form action={activateRoom}>
+          <form action={activationAction}>
             <input type="hidden" name="roomId" value={roomId} />
             <SubmitButton label="Start Session Now" pendingLabel="Starting..." />
           </form>
@@ -79,7 +106,7 @@ export function WaitingRoom({ title, startsAt, isHost, roomId, currentBookings, 
             <p className="text-red-500 text-sm">All spots have been reserved.</p>
           </div>
         ) : (
-          <form action={bookRoom}>
+          <form action={bookingAction}>
             <input type="hidden" name="roomId" value={roomId} />
             <SubmitButton label="Reserve Your Spot" pendingLabel="Reserving..." />
           </form>

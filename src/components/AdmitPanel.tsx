@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
 import { admitUser, admitAll } from "@/app/actions/admit";
 import { Loader2, UserCheck, Users, CheckCheck } from "lucide-react";
+import { useToast } from "@/components/ui/toast-provider";
 
 type Booking = {
   id: string;
@@ -18,44 +18,55 @@ interface AdmitPanelProps {
   bookings: Booking[];
 }
 
-function AdmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
-    >
-      {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCheck className="h-3 w-3" />}
-      {pending ? "Admitting..." : "Admit"}
-    </button>
-  );
-}
-
-function AdmitAllButton({ count }: { count: number }) {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
-    >
-      {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-      {pending ? "Admitting all..." : `Admit All (${count})`}
-    </button>
-  );
-}
-
 export function AdmitPanel({ roomId, bookings }: AdmitPanelProps) {
   const router = useRouter();
+  const { showToast } = useToast();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const waiting = bookings.filter((b) => b.status === "booked");
   const admitted = bookings.filter((b) => b.status === "admitted");
 
-  // Auto-refresh host's waiting list every 3 seconds
   useEffect(() => {
     const interval = setInterval(() => router.refresh(), 3000);
     return () => clearInterval(interval);
   }, [router]);
+
+  const handleAdmit = (booking: Booking) => {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("bookingId", booking.id);
+      formData.set("roomId", roomId);
+      setPendingId(booking.id);
+      try {
+        await admitUser(formData);
+        showToast(`${booking.userName || "Participant"} admitted successfully.`, "success");
+        router.refresh();
+      } catch (error) {
+        console.error("[AdmitPanel] admit error:", error);
+        showToast("Could not admit participant. Please try again.", "error");
+      } finally {
+        setPendingId(null);
+      }
+    });
+  };
+
+  const handleAdmitAll = () => {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("roomId", roomId);
+      setPendingId("all");
+      try {
+        await admitAll(formData);
+        showToast("All waiting participants were admitted.", "success");
+        router.refresh();
+      } catch (error) {
+        console.error("[AdmitPanel] admitAll error:", error);
+        showToast("Could not admit participants. Please try again.", "error");
+      } finally {
+        setPendingId(null);
+      }
+    });
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -69,12 +80,16 @@ export function AdmitPanel({ roomId, bookings }: AdmitPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {/* Admit All */}
         {waiting.length > 1 && (
-          <form action={admitAll}>
-            <input type="hidden" name="roomId" value={roomId} />
-            <AdmitAllButton count={waiting.length} />
-          </form>
+          <button
+            type="button"
+            onClick={handleAdmitAll}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            {isPending && pendingId === "all" ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+            {isPending && pendingId === "all" ? "Admitting all..." : `Admit All (${waiting.length})`}
+          </button>
         )}
 
         {waiting.length === 0 ? (
@@ -93,11 +108,15 @@ export function AdmitPanel({ roomId, bookings }: AdmitPanelProps) {
                 </div>
                 <span className="text-sm text-slate-200 truncate">{booking.userName || "A Learner"}</span>
               </div>
-              <form action={admitUser}>
-                <input type="hidden" name="bookingId" value={booking.id} />
-                <input type="hidden" name="roomId" value={roomId} />
-                <AdmitButton />
-              </form>
+              <button
+                type="button"
+                onClick={() => handleAdmit(booking)}
+                disabled={isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                {isPending && pendingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCheck className="h-3 w-3" />}
+                {isPending && pendingId === booking.id ? "Admitting..." : "Admit"}
+              </button>
             </div>
           ))
         )}

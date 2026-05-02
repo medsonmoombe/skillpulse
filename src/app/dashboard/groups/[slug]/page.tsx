@@ -1,220 +1,408 @@
-// src/app/dashboard/groups/[slug]/page.tsx
 import { db } from "@/db";
-import { groups, groupMemberships, groupPosts, users, rooms } from "@/db/schema";
+import { rooms } from "@/db/schema";
 import { getCurrentUser } from "@/lib/currentUser";
-import { eq, desc } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChatInput } from "@/components/ChatInput";
-import { GoLiveButton } from "@/components/GoLiveButton";
-import { Users, Hash, Info, Radio } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { GoLiveButton } from "@/components/GoLiveButton";
+import { OpenGroupChatButton } from "@/components/OpenGroupChatButton";
+import { StartConversationButton } from "@/components/StartConversationButton";
+import {
+  ApproveMemberForm,
+  RejectMemberForm,
+  RemoveMemberForm,
+  UpdateRoleForm,
+  GovernanceForm,
+} from "@/components/GroupAdminForms";
+import {
+  canUserManageGroup,
+  getGroupBySlugWithGovernance,
+  getGroupMembershipState,
+  listGroupMembers,
+} from "@/lib/group-governance";
+import { getDirectMessageEligibility } from "@/lib/messaging";
+import {
+  Users, MessageSquare, Lock, Crown, ChevronRight,
+  ShieldCheck, Settings, Hash, Clock, ArrowLeft,
+} from "lucide-react";
 
 interface GroupPageProps {
   params: Promise<{ slug: string }>;
 }
+
+const ROLE_CONFIG = {
+  admin:     { label: "Admin",  color: "bg-indigo-100 text-indigo-700", icon: Crown       },
+  moderator: { label: "Mod",    color: "bg-purple-100 text-purple-700", icon: ShieldCheck },
+  member:    { label: "Member", color: "bg-slate-100 text-slate-600",   icon: Users       },
+} as const;
 
 export default async function GroupPage({ params }: GroupPageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/dashboard");
 
   const { slug } = await params;
-
-  const [group] = await db.select().from(groups).where(eq(groups.slug, slug));
+  const group = await getGroupBySlugWithGovernance(slug);
   if (!group) notFound();
 
-  // Fetch members with user details
-  const memberships = await db
-    .select({ userId: groupMemberships.userId, name: users.displayName, avatar: users.avatarUrl })
-    .from(groupMemberships)
-    .leftJoin(users, eq(groupMemberships.userId, users.id))
-    .where(eq(groupMemberships.groupId, group.id));
+  const [membershipState, memberships, isAdmin] = await Promise.all([
+    getGroupMembershipState(group.id, user.id),
+    listGroupMembers(group.id),
+    canUserManageGroup(group.id, user.id),
+  ]);
 
-  const userIsMember = memberships.some(m => m.userId === user.id);
-  if (!userIsMember) redirect("/dashboard/groups");
+  if (membershipState?.status !== "approved") redirect("/dashboard/groups");
 
-  // Check for active live room linked to this group
+  const myRole = membershipState.role;
+  const approvedMembers = memberships.filter((m) => m.status === "approved");
+  const pendingMembers  = memberships.filter((m) => m.status === "pending");
+
+  const otherIds = Array.from(new Set(
+    approvedMembers.map((m) => m.userId).filter((id) => id !== user.id)
+  ));
+  const eligibilityResults = await Promise.all(
+    otherIds.map(async (id) => [id, await getDirectMessageEligibility(user.id, id)] as const)
+  );
+  const memberEligibility = new Map(eligibilityResults);
+
   const [activeRoom] = await db
     .select()
     .from(rooms)
-    .where(eq(rooms.groupId, group.id));
+    .where(and(eq(rooms.groupId, group.id), eq(rooms.status, "active")));
 
-  const posts = await db
-    .select({
-      id: groupPosts.id,
-      content: groupPosts.content,
-      createdAt: groupPosts.createdAt,
-      authorId: groupPosts.authorId,
-      authorName: users.displayName,
-      authorAvatar: users.avatarUrl,
-    })
-    .from(groupPosts)
-    .leftJoin(users, eq(groupPosts.authorId, users.id))
-    .where(eq(groupPosts.groupId, group.id))
-    .orderBy(desc(groupPosts.createdAt));
-
-  // Reverse so oldest messages appear at top (like WhatsApp)
-  const orderedPosts = [...posts].reverse();
+  const sortedMembers = [...approvedMembers].sort((a, b) => {
+    const order = { admin: 0, moderator: 1, member: 2 };
+    if (a.userId === user.id) return -1;
+    if (b.userId === user.id) return 1;
+    return (order[a.role] ?? 3) - (order[b.role] ?? 3);
+  });
 
   return (
-    <div className="flex flex-col bg-white" style={{ height: 'calc(100vh - 4rem)' }}>
+    <div className="space-y-0">
 
-      {/* TOP NAVBAR — handled by dashboard layout */}
-
-      {/* MAIN LAYOUT: sidebar + chat */}
-      <div className="flex-1 flex overflow-hidden">
-
-        {/* LEFT SIDEBAR */}
-        <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-slate-50">
-          {/* Go Live + Active Room Banner */}
-          <div className="p-3 border-b space-y-2">
-            {activeRoom ? (
-              <Link href={`/dashboard/room/${activeRoom.id}`} className="flex items-center justify-between gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2.5 hover:bg-indigo-100 transition-colors">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                  <span className="text-xs font-semibold text-indigo-700 truncate">Live session active!</span>
-                </div>
-                <span className="text-xs font-bold text-indigo-600 shrink-0">Join →</span>
-              </Link>
-            ) : (
-              <GoLiveButton groupId={group.id} />
-            )}
+      {/* ── COVER BANNER ── */}
+      <div className="relative mb-6 overflow-hidden rounded-3xl">
+        {group.coverImageUrl ? (
+          <div className="relative h-48 w-full md:h-56">
+            <Image src={group.coverImageUrl} alt={group.name} fill className="object-cover" priority />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </div>
+        ) : (
+          <div className="h-36 w-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 md:h-44" />
+        )}
+
+        <Link
+          href="/dashboard/groups"
+          className="absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                {group.isPrivate && (
+                  <span className="flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+                    <Lock className="h-3 w-3" /> Private
+                  </span>
+                )}
+                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold backdrop-blur-sm ${
+                  group.joinMode === "approval_required"
+                    ? "bg-amber-500/70 text-white"
+                    : "bg-emerald-500/70 text-white"
+                }`}>
+                  {group.joinMode === "approval_required" ? "Approval required" : "Open entry"}
+                </span>
+                {isAdmin && (
+                  <span className="flex items-center gap-1 rounded-full bg-indigo-600/80 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+                    <Crown className="h-3 w-3" /> Admin
+                  </span>
+                )}
+              </div>
+              <h1 className="text-xl font-extrabold text-white drop-shadow-sm md:text-2xl">{group.name}</h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-sm">
+              <Users className="h-3.5 w-3.5 text-white" />
+              <span className="text-xs font-semibold text-white">{approvedMembers.length}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── QUICK ACTIONS BAR ── */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <OpenGroupChatButton
+          groupId={group.id}
+          label="Open Chat"
+          size="sm"
+          className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+        />
+        {activeRoom ? (
+          <Link
+            href={`/dashboard/room/${activeRoom.id}`}
+            className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+          >
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+            Live — Join
+          </Link>
+        ) : isAdmin ? (
+          <GoLiveButton groupId={group.id} />
+        ) : (
+          <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
+            Only admins can start live rooms
+          </span>
+        )}
+        {isAdmin && (
+          <Link
+            href={`/dashboard/groups/${group.slug}/edit`}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600"
+          >
+            Edit Group
+          </Link>
+        )}
+        <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-500">
+          <Hash className="h-3.5 w-3.5" />
+          {group.memberMessagingPolicy === "admins_only" ? "Admins only can message" : "All members can message"}
+        </div>
+      </div>
+
+      {/* ── DESCRIPTION ── */}
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <p className="text-sm leading-relaxed text-slate-600">{group.description}</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+
+        {/* ── LEFT: MEMBERS ── */}
+        <div className="space-y-4">
+
+          {/* Pending requests — admin only */}
+          {isAdmin && pendingMembers.length > 0 && (
+            <section className="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50 px-5 py-3">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <h2 className="text-sm font-bold text-amber-800">Join Requests</h2>
+                <span className="ml-auto rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                  {pendingMembers.length}
+                </span>
+              </div>
+              <div className="divide-y divide-amber-50">
+                {pendingMembers.map((member) => (
+                  <div key={member.userId} className="flex items-center gap-3 px-5 py-3.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-sm font-bold text-white shadow-sm">
+                      {member.avatar
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={member.avatar} alt="" className="h-full w-full object-cover" />
+                        : member.name?.charAt(0).toUpperCase() ?? "?"
+                      }
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">{member.name ?? "Unknown"}</p>
+                      <p className="text-xs text-slate-500">Requesting to join</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <ApproveMemberForm groupId={group.id} targetUserId={member.userId} />
+                      <RejectMemberForm  groupId={group.id} targetUserId={member.userId} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Members list */}
-          <div className="flex-1 overflow-y-auto p-3">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3 px-1">
-              Members — {memberships.length}
-            </p>
-            <div className="space-y-1">
-              {memberships.map((member) => (
-                <div key={member.userId} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white transition-colors">
-                  <div className="relative">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={member.avatar || ""} />
-                      <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-semibold">
-                        {member.name?.charAt(0) || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {/* Online dot */}
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-400 border-2 border-slate-50" />
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+              <Users className="h-4 w-4 text-slate-400" />
+              <h2 className="text-sm font-bold text-slate-900">Members</h2>
+              <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+                {approvedMembers.length}
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-50">
+              {sortedMembers.map((member) => {
+                const isMe      = member.userId === user.id;
+                const isCreator = group.createdBy === member.userId;
+                const roleConf  = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.member;
+                const RoleIcon  = roleConf.icon;
+                const eligibility = memberEligibility.get(member.userId);
+
+                return (
+                  <div key={member.userId} className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      {/* Avatar — links to profile */}
+                      <Link href={`/profile/${member.userId}`} className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 text-sm font-bold text-white shadow-sm hover:opacity-90 transition-opacity">
+                        {member.avatar
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={member.avatar} alt="" className="h-full w-full object-cover" />
+                          : member.name?.charAt(0).toUpperCase() ?? "?"
+                        }
+                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400" />
+                      </Link>
+
+                      {/* Name + role */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Link href={`/profile/${member.userId}`} className="truncate text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors">
+                            {member.name ?? "Unknown"}
+                          </Link>
+                          {isMe && <span className="text-[11px] font-medium text-indigo-500">(you)</span>}
+                          {isCreator && (
+                            <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-600">
+                              <Crown className="h-3 w-3" /> Creator
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1">
+                          <RoleIcon className={`h-3 w-3 ${roleConf.color.split(" ")[1]}`} />
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${roleConf.color}`}>
+                            {roleConf.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Message button */}
+                      {!isMe && (
+                        <StartConversationButton
+                          targetUserId={member.userId}
+                          disabled={eligibility?.allowed === false}
+                          disabledReason={eligibility?.reason}
+                          label="Message"
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 gap-1.5 text-xs"
+                        />
+                      )}
+                    </div>
+
+                    {/* Admin controls */}
+                    {isAdmin && !isMe && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 pl-[52px]">
+                        <UpdateRoleForm
+                          groupId={group.id}
+                          targetUserId={member.userId}
+                          currentRole={member.role}
+                        />
+                        {!isCreator && (
+                          <RemoveMemberForm groupId={group.id} targetUserId={member.userId} />
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-800 truncate">
-                      {member.name || "Unknown"}
-                      {member.userId === user.id && <span className="text-indigo-500 ml-1">(you)</span>}
-                    </p>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+
+        {/* ── RIGHT SIDEBAR ── */}
+        <aside className="space-y-4">
+
+          {/* Chat + Live card */}
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-purple-50 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-indigo-500" />
+                <p className="text-sm font-bold text-slate-900">Group Chat</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Live messaging with typing indicators, attachments, and notifications.
+              </p>
+            </div>
+            <div className="space-y-2 p-4">
+              <OpenGroupChatButton
+                groupId={group.id}
+                label="Open group chat"
+                size="sm"
+                className="w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              />
+              {activeRoom ? (
+                <Link
+                  href={`/dashboard/room/${activeRoom.id}`}
+                  className="flex w-full items-center justify-between rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 transition hover:bg-red-100"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                    <span className="text-xs font-semibold text-red-700">Live session active</span>
                   </div>
+                  <ChevronRight className="h-4 w-4 text-red-500" />
+                </Link>
+              ) : isAdmin ? (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="mb-2 text-xs text-slate-500">No live session running</p>
+                  <GoLiveButton groupId={group.id} />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Only group admins can create live group sessions.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Group info */}
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+              <Hash className="h-4 w-4 text-slate-400" />
+              <p className="text-sm font-bold text-slate-900">Group Info</p>
+            </div>
+            <div className="space-y-3 p-4">
+              {[
+                { label: "Entry",     value: group.joinMode === "approval_required" ? "Approval required" : "Open entry" },
+                { label: "Messaging", value: group.memberMessagingPolicy === "admins_only" ? "Admins only" : "All members" },
+                { label: "Privacy",   value: group.isPrivate ? "Private" : "Public" },
+                { label: "Members",   value: `${approvedMembers.length} approved` },
+                ...(isAdmin && pendingMembers.length > 0
+                  ? [{ label: "Pending", value: `${pendingMembers.length} request${pendingMembers.length !== 1 ? "s" : ""}` }]
+                  : []),
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">{label}</span>
+                  <span className="text-xs font-semibold text-slate-800">{value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Group info footer */}
-          <div className="p-3 border-t">
-            <div className="flex items-start gap-2 text-xs text-slate-500 bg-white rounded-lg p-2.5 border">
-              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
-              <p className="line-clamp-3">{group.description}</p>
-            </div>
-          </div>
-        </aside>
-
-        {/* RIGHT: CHAT AREA */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-
-          {/* Mobile: Go Live / Active Room */}
-          <div className="lg:hidden shrink-0 p-3 border-b bg-white">
-            {activeRoom ? (
-              <Link href={`/dashboard/room/${activeRoom.id}`} className="flex items-center justify-between gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs font-semibold text-indigo-700">Live session active!</span>
-                </div>
-                <span className="text-xs font-bold text-indigo-600">Join →</span>
-              </Link>
-            ) : (
-              <GoLiveButton groupId={group.id} />
-            )}
-          </div>
-
-          {/* MESSAGES — scrollable */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-            {orderedPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
-                  <Hash className="h-8 w-8 text-indigo-300" />
-                </div>
-                <p className="font-semibold text-slate-600">No messages yet</p>
-                <p className="text-sm text-slate-400 mt-1">Say hello to kick things off 👋</p>
+          {/* Admin governance controls */}
+          {isAdmin && (
+            <div className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-indigo-100 bg-indigo-50 px-5 py-3">
+                <Settings className="h-4 w-4 text-indigo-500" />
+                <p className="text-sm font-bold text-indigo-900">Group Controls</p>
+                <span className="ml-auto rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700">
+                  Admin only
+                </span>
               </div>
-            ) : (
-              orderedPosts.map((post, i) => {
-                const isOwn = post.authorId === user.id;
-                const prevPost = orderedPosts[i - 1];
-                const nextPost = orderedPosts[i + 1];
-                const isGroupedWithPrev = prevPost?.authorId === post.authorId;
-                const isGroupedWithNext = nextPost?.authorId === post.authorId;
-                const showAvatar = !isOwn && !isGroupedWithNext;
-                const showName = !isOwn && !isGroupedWithPrev;
+              <GovernanceForm
+                groupId={group.id}
+                joinMode={group.joinMode}
+                memberMessagingPolicy={group.memberMessagingPolicy}
+              />
+            </div>
+          )}
 
+          {/* My role — non-admins */}
+          {!isAdmin && (
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Your Role</p>
+              {(() => {
+                const conf = ROLE_CONFIG[myRole] ?? ROLE_CONFIG.member;
+                const Icon = conf.icon;
                 return (
-                  <div
-                    key={post.id}
-                    className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"} ${isGroupedWithPrev ? "mt-0.5" : "mt-4"}`}
-                  >
-                    {/* Avatar — only show for last message in a group (like WhatsApp) */}
-                    {!isOwn && (
-                      <div className="w-8 shrink-0">
-                        {showAvatar && (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={post.authorAvatar || ""} />
-                            <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-semibold">
-                              {post.authorName?.charAt(0) || "A"}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    )}
-
-                    <div className={`flex flex-col max-w-[70%] ${isOwn ? "items-end" : "items-start"}`}>
-                      {/* Sender name — only first in group */}
-                      {showName && (
-                        <span className="text-[11px] font-semibold text-indigo-600 mb-1 px-1">
-                          {post.authorName || "Unknown"}
-                        </span>
-                      )}
-
-                      {/* Bubble */}
-                      <div
-                        className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words shadow-sm ${
-                          isOwn
-                            ? "bg-indigo-600 text-white rounded-br-sm"
-                            : "bg-white text-slate-800 border border-slate-200 rounded-bl-sm"
-                        } ${isGroupedWithPrev && isOwn ? "rounded-tr-2xl" : ""} ${isGroupedWithPrev && !isOwn ? "rounded-tl-2xl" : ""}`}
-                      >
-                        {post.content}
-                      </div>
-
-                      {/* Timestamp — only on last in group */}
-                      {!isGroupedWithNext && (
-                        <span className="text-[10px] text-slate-400 mt-1 px-1">
-                          {new Date(post.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Icon className={`h-4 w-4 ${conf.color.split(" ")[1]}`} />
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${conf.color}`}>
+                      {conf.label}
+                    </span>
                   </div>
                 );
-              })
-            )}
-          </div>
-
-          {/* CHAT INPUT — pinned bottom */}
-          <div className="shrink-0 border-t bg-white px-4 py-3">
-            <ChatInput groupId={group.id} />
-          </div>
-        </div>
+              })()}
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );

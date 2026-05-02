@@ -4,6 +4,16 @@ import { useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useStorage, useMutation } from "@liveblocks/react/suspense";
 
+declare global {
+  interface Window {
+    __skillpulseGetMainBoardScene?: () => {
+      elements: readonly any[];
+      appState: any;
+      files: any;
+    } | null;
+  }
+}
+
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
   {
@@ -24,7 +34,7 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
   const elements = useStorage((root) => (root.excalidrawState as any)?.elements ?? []);
   const permissions = useStorage((root) => (root as any).permissions);
 
-  const canEdit = isHost || permissions?.get(currentUserId) === true;
+  const canEdit = isHost || permissions?.[currentUserId] === true;
 
   const updateElements = useMutation(({ storage }, updated: any[]) => {
     (storage.get("excalidrawState") as any)?.set("elements", updated);
@@ -48,13 +58,29 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
     [updateElements, canEdit]
   );
 
+  useEffect(() => {
+    window.__skillpulseGetMainBoardScene = () => ({
+      elements: apiRef.current?.getSceneElements?.() ?? (elements as any[]) ?? [],
+      appState: apiRef.current?.getAppState?.() ?? { viewBackgroundColor: "#ffffff" },
+      files: apiRef.current?.getFiles?.() ?? null,
+    });
+
+    return () => {
+      if (window.__skillpulseGetMainBoardScene) {
+        delete window.__skillpulseGetMainBoardScene;
+      }
+    };
+  }, [elements]);
+
   return (
     <div className="h-full w-full relative">
       <Excalidraw
         excalidrawAPI={(api) => { apiRef.current = api; }}
         initialData={{
           elements: elements as any,
-          appState: { viewBackgroundColor: "#ffffff" },
+          appState: {
+            viewBackgroundColor: "#ffffff",
+          },
         }}
         UIOptions={{
           canvasActions: {
@@ -66,11 +92,11 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
         onChange={onChange}
         viewModeEnabled={!canEdit}
       />
-      {!canEdit && (
+      {/* {!canEdit && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-medium shadow-md border border-amber-200 z-50 pointer-events-none">
           👁️ View Only — Ask host for control to draw
         </div>
-      )}
+      )} */}
     </div>
   );
 }

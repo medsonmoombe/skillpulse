@@ -17,7 +17,9 @@ export function ClosedRoom({ title, status }: ClosedRoomProps) {
         <p className="text-slate-500 mb-6">
           {status === "expired"
             ? "This session was cancelled because the host didn't show up."
-            : "This session has ended."}
+            : status === "full"
+              ? "This live session has reached its participant limit."
+              : "This session has ended."}
         </p>
         <Link
           href="/dashboard"

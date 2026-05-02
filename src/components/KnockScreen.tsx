@@ -1,8 +1,21 @@
 "use client";
 
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { knockOnDoor } from "@/app/actions/knock";
 import { Loader2, DoorOpen } from "lucide-react";
+import { useActionToast } from "@/lib/use-action-toast";
+
+type ActionState = { success?: boolean; message?: string } | null;
+
+async function knockOnDoorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await knockOnDoor(formData);
+    return { success: true, message: "Join request sent to the host." };
+  } catch (error: any) {
+    return { success: false, message: error?.message ?? "Could not send your join request." };
+  }
+}
 
 function KnockButton() {
   const { pending } = useFormStatus();
@@ -19,6 +32,9 @@ function KnockButton() {
 }
 
 export function KnockScreen({ roomId, title }: { roomId: string; title: string }) {
+  const [state, formAction] = useActionState(knockOnDoorAction, null);
+  useActionToast(state);
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-slate-950 p-8 text-center">
       <div className="max-w-sm w-full">
@@ -29,7 +45,7 @@ export function KnockScreen({ roomId, title }: { roomId: string; title: string }
         <p className="text-slate-400 text-sm mb-8">
           This session is live. Request to join and the host will let you in.
         </p>
-        <form action={knockOnDoor}>
+        <form action={formAction}>
           <input type="hidden" name="roomId" value={roomId} />
           <KnockButton />
         </form>

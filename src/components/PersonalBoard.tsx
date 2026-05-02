@@ -1,0 +1,170 @@
+"use client";
+
+import { useCallback, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { useMutation, useStorage } from "@liveblocks/react/suspense";
+import { LiveObject } from "@liveblocks/client";
+import { Share2, X } from "lucide-react";
+
+const Excalidraw = dynamic(
+  () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center bg-slate-50 text-sm text-slate-400">
+        Loading board...
+      </div>
+    ),
+  }
+);
+
+interface PersonalBoardProps {
+  currentUserId: string;
+  boardOwnerId: string;
+  ownerName: string;
+  isHost: boolean;
+  onClose: () => void;
+  onRequestShare?: (userId: string) => void;
+}
+
+export function PersonalBoard({
+  currentUserId,
+  boardOwnerId,
+  ownerName,
+  isHost,
+  onClose,
+  onRequestShare,
+}: PersonalBoardProps) {
+  const apiRef = useRef<any>(null);
+  const lastSyncedRef = useRef<string>("");
+  const isOwner = currentUserId === boardOwnerId;
+
+  const elements = useStorage((root) => {
+    const boards = (root as any).personalBoards;
+    if (!boards) return [];
+
+    const board = boards[boardOwnerId];
+    if (!board) return [];
+
+    return board.elements ?? [];
+  });
+
+  const ensureBoard = useMutation(({ storage }) => {
+    const boards = (storage as any).get("personalBoards");
+    if (!boards?.get(boardOwnerId)) {
+      boards?.set(boardOwnerId, new LiveObject({ elements: [] }));
+    }
+  }, [boardOwnerId]);
+
+  const updateBoard = useMutation(({ storage }, updated: any[]) => {
+    const boards = (storage as any).get("personalBoards");
+    if (!boards) return;
+
+    let board = boards.get(boardOwnerId);
+    if (!board) {
+      board = new LiveObject({ elements: updated });
+      boards.set(boardOwnerId, board);
+      return;
+    }
+
+    board.set("elements", updated);
+  }, [boardOwnerId]);
+
+  useEffect(() => {
+    if (isOwner) {
+      ensureBoard();
+    }
+  }, [ensureBoard, isOwner]);
+
+  useEffect(() => {
+    if (!apiRef.current) return;
+
+    const nextSnapshot = JSON.stringify(elements ?? []);
+    if (nextSnapshot === lastSyncedRef.current) return;
+
+    lastSyncedRef.current = nextSnapshot;
+    apiRef.current.updateScene({ elements: (elements as any[]) ?? [] });
+  }, [elements]);
+
+  const handleChange = useCallback(
+    (updated: readonly any[]) => {
+      if (!isOwner) return;
+
+      const nextSnapshot = JSON.stringify(updated);
+      if (nextSnapshot === lastSyncedRef.current) return;
+
+      lastSyncedRef.current = nextSnapshot;
+      updateBoard([...updated]);
+    },
+    [isOwner, updateBoard]
+  );
+
+  return (
+    <div className="flex h-full flex-col bg-white">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${isOwner ? "bg-indigo-500" : "animate-pulse bg-emerald-500"}`} />
+          <span className="text-xs font-semibold text-slate-700">
+            {isOwner ? "My Board" : `${ownerName}'s Board`}
+          </span>
+          {!isOwner ? (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-400">
+              Live
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {isHost && !isOwner && onRequestShare ? (
+            <button
+              onClick={() => onRequestShare(boardOwnerId)}
+              title="Request to share this board with everyone"
+              className="flex items-center gap-1 rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100"
+            >
+              <Share2 className="h-3 w-3" />
+              Share to all
+            </button>
+          ) : null}
+
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="relative flex-1">
+        <Excalidraw
+          excalidrawAPI={(api) => {
+            apiRef.current = api;
+            const initialElements = (elements as any[]) ?? [];
+            lastSyncedRef.current = JSON.stringify(initialElements);
+            api.updateScene({ elements: initialElements });
+            // Force viewers into selection mode so they can zoom/pan but not draw
+            if (!isOwner) {
+              api.setActiveTool({ type: "selection" });
+            }
+          }}
+          initialData={{
+            elements: (elements as any[]) ?? [],
+            appState: { viewBackgroundColor: "#fafafa" },
+          }}
+          UIOptions={{
+            canvasActions: { loadScene: false, export: false as any },
+          }}
+          validateEmbeddable={false}
+          onChange={handleChange}
+          viewModeEnabled={false}
+        />
+
+        {!isOwner ? (
+          <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-800/80 px-3 py-1.5 text-xs text-white">
+            Viewing {ownerName}&apos;s board live
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

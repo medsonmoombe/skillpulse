@@ -5,8 +5,14 @@ import { users, userTopics } from "@/db/schema";
 import { getCurrentUser } from "@/lib/currentUser";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import type { DiscoveryIntent } from "@/lib/discovery-intent";
+import { updateDiscoveryIntentIfAvailable } from "@/lib/user-settings-compat";
 
-export async function onboardUser(selectedTopicIds: string[], wantsToTeach: boolean) {
+export async function onboardUser(
+  selectedTopicIds: string[],
+  wantsToTeach: boolean,
+  discoveryIntent: DiscoveryIntent
+) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -31,6 +37,9 @@ export async function onboardUser(selectedTopicIds: string[], wantsToTeach: bool
     await db.insert(userTopics).values(values);
   }
 
+  await updateDiscoveryIntentIfAvailable(user.id, discoveryIntent);
+
   // 4. Refresh the Dashboard page so it shows the new data
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/settings");
 }

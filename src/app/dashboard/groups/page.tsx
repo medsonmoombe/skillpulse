@@ -1,174 +1,168 @@
 import { db } from "@/db";
-import { groups, groupMemberships, groupPosts, users } from "@/db/schema";
+import { groupMemberships, groupPosts, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/currentUser";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, ArrowLeft, Hash, Lock, MessageCircle } from "lucide-react";
+import { Users, Plus, Lock, Clock, Sparkles, ShieldCheck, ChevronRight, MessageCircle } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { listGroupsWithGovernance, listUserGroupMembershipStates } from "@/lib/group-governance";
+import { GroupsDiscoverSection } from "@/components/GroupsDiscoverSection";
 
-export default async function GroupsPage() {
+const GRADIENTS = [
+  "from-indigo-400 to-purple-500",
+  "from-sky-400 to-indigo-500",
+  "from-emerald-400 to-teal-500",
+  "from-rose-400 to-pink-500",
+  "from-amber-400 to-orange-500",
+  "from-violet-400 to-purple-600",
+];
+
+type GroupsPageProps = PageProps<"/dashboard/groups">;
+
+export default async function GroupsPage(props: GroupsPageProps) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const allGroups = await db.select().from(groups);
+  const allGroups = await listGroupsWithGovernance();
+  const userMemberships = await listUserGroupMembershipStates(user.id);
 
-  const userMemberships = await db
-    .select({ groupId: groupMemberships.groupId })
-    .from(groupMemberships)
-    .where(eq(groupMemberships.userId, user.id));
+  const approvedGroupIds = new Set(userMemberships.filter((m) => m.status === "approved").map((m) => m.groupId));
+  const pendingGroupIds = new Set(userMemberships.filter((m) => m.status === "pending").map((m) => m.groupId));
+  const myRoleMap = new Map(userMemberships.filter((m) => m.status === "approved").map((m) => [m.groupId, m.role]));
 
-  const memberGroupIds = userMemberships.map((m) => m.groupId);
+  const searchParams = await props.searchParams;
+  const joinStatus = typeof searchParams.join === "string" ? searchParams.join : null;
+  const joinGroupSlug = typeof searchParams.group === "string" ? searchParams.group : null;
 
-  // Fetch last message + member count for each group
   const groupDetails = await Promise.all(
-    allGroups.map(async (group) => {
-      const [lastPost] = await db
-        .select({ content: groupPosts.content, createdAt: groupPosts.createdAt, authorName: users.displayName })
-        .from(groupPosts)
-        .leftJoin(users, eq(groupPosts.authorId, users.id))
-        .where(eq(groupPosts.groupId, group.id))
-        .orderBy(desc(groupPosts.createdAt))
-        .limit(1);
-
-      const memberCount = await db
-        .select({ userId: groupMemberships.userId })
+    allGroups.map(async (group, idx) => {
+      const [{ count }] = await db
+        .select({ count: sql<number>`cast(count(*) as int)` })
         .from(groupMemberships)
         .where(eq(groupMemberships.groupId, group.id));
 
-      return { ...group, lastPost: lastPost || null, memberCount: memberCount.length };
+      return {
+        ...group,
+        memberCount: count,
+        gradient: GRADIENTS[idx % GRADIENTS.length],
+        myRole: myRoleMap.get(group.id) ?? null,
+      };
     })
   );
 
-  const myGroups = groupDetails.filter(g => memberGroupIds.includes(g.id));
-  const discoverGroups = groupDetails.filter(g => !memberGroupIds.includes(g.id));
+  const myGroups = groupDetails.filter((g) => approvedGroupIds.has(g.id));
+  const pendingGroups = groupDetails.filter((g) => pendingGroupIds.has(g.id));
+  const discoverGroups = groupDetails.filter((g) => !approvedGroupIds.has(g.id) && !pendingGroupIds.has(g.id));
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 border-b bg-white h-16 flex items-center justify-between px-6 shadow-sm">
-        <Link href="/dashboard" className="text-xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-500 text-transparent bg-clip-text">
-          SkillPulse
-        </Link>
-        <Link href="/dashboard">
-          <Button variant="outline" size="sm" className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Dashboard
-          </Button>
-        </Link>
-      </nav>
+    <div className="space-y-8">
+      {joinStatus === "requested" && joinGroupSlug && (
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Clock className="h-4 w-4 shrink-0 text-amber-500" />
+          Your request to join <span className="font-semibold">{joinGroupSlug}</span> is pending admin approval.
+        </div>
+      )}
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Groups</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            {myGroups.length > 0
+              ? `You're in ${myGroups.length} group${myGroups.length !== 1 ? "s" : ""} · ${discoverGroups.length} more to explore`
+              : "Find your community and start learning together"}
+          </p>
+        </div>
+        <Button asChild size="sm" className="gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 shadow-md shadow-indigo-500/20 hover:opacity-90">
+          <Link href="/dashboard/groups/new"><Plus className="h-4 w-4" /> New Group</Link>
+        </Button>
+      </div>
 
-        {/* HEADER */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Groups</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Learn and grow with your community</p>
+      {/* My Groups — compact horizontal list */}
+      {myGroups.length > 0 && (
+        <section>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Your Groups ({myGroups.length})</p>
+          <div className="space-y-2">
+            {myGroups.map((group) => (
+              <Link key={group.id} href={`/dashboard/groups/${group.slug}`}
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-200 hover:shadow-sm transition-all">
+                <div className={`h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br ${group.gradient} flex items-center justify-center`}>
+                  {group.coverImageUrl ? (
+                    <Image src={group.coverImageUrl} alt={group.name} width={40} height={40} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-bold text-white">{group.name.charAt(0)}</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{group.name}</p>
+                    {group.myRole === "admin" && <Badge className="border-0 bg-indigo-100 text-indigo-700 text-[10px]">Admin</Badge>}
+                    {group.isPrivate && <Lock className="h-3 w-3 text-slate-400 shrink-0" />}
+                  </div>
+                  <p className="text-xs text-slate-400">{group.memberCount} members</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+              </Link>
+            ))}
           </div>
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 gap-2">
-            <Plus className="h-4 w-4" /> New Group
+        </section>
+      )}
+
+      {/* Pending */}
+      {pendingGroups.length > 0 && (
+        <section>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Pending Approval</p>
+          <div className="space-y-2">
+            {pendingGroups.map((group) => (
+              <div key={group.id} className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <div className={`h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br ${group.gradient} flex items-center justify-center`}>
+                  <span className="text-sm font-bold text-white">{group.name.charAt(0)}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{group.name}</p>
+                  <p className="text-xs text-amber-700">Awaiting admin approval</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Discover — client component with search/filter */}
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-slate-400" />
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Discover Groups</p>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">{discoverGroups.length}</span>
+        </div>
+        <GroupsDiscoverSection
+          groups={discoverGroups.map((g) => ({
+            id: g.id,
+            name: g.name,
+            slug: g.slug,
+            description: g.description,
+            coverImageUrl: g.coverImageUrl,
+            isPrivate: g.isPrivate,
+            joinMode: g.joinMode,
+            memberCount: g.memberCount,
+            gradient: g.gradient,
+          }))}
+        />
+      </section>
+
+      {allGroups.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-white py-24 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+            <Users className="h-8 w-8 text-indigo-300" />
+          </div>
+          <p className="font-semibold text-slate-700">No groups yet</p>
+          <p className="mt-1 text-sm text-slate-400">Create the first group and start learning together.</p>
+          <Button asChild className="mt-6 gap-2 bg-indigo-600 hover:bg-indigo-700">
+            <Link href="/dashboard/groups/new"><Plus className="h-4 w-4" /> Create a Group</Link>
           </Button>
         </div>
-
-        {/* MY GROUPS — WhatsApp conversation list style */}
-        {myGroups.length > 0 && (
-          <div className="mb-8">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-1">Your Groups</p>
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm divide-y divide-slate-100">
-              {myGroups.map((group) => (
-                <Link key={group.id} href={`/dashboard/groups/${group.slug}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors">
-                  {/* Group Avatar */}
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shrink-0 shadow-sm">
-                    <Hash className="h-6 w-6 text-white" />
-                  </div>
-
-                  {/* Group Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-slate-900 text-sm truncate">{group.name}</span>
-                      {group.lastPost && (
-                        <span className="text-[11px] text-slate-400 shrink-0 ml-2">
-                          {new Date(group.lastPost.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-slate-500 truncate">
-                        {group.lastPost
-                          ? <><span className="font-medium text-slate-600">{group.lastPost.authorName?.split(" ")[0]}:</span> {group.lastPost.content}</>
-                          : <span className="italic">No messages yet</span>
-                        }
-                      </p>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0 ml-2">
-                        <Users className="h-3 w-3" />
-                        {group.memberCount}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* DISCOVER GROUPS */}
-        {discoverGroups.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-1">Discover</p>
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm divide-y divide-slate-100">
-              {discoverGroups.map((group) => (
-                <div key={group.id} className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors">
-                  {/* Group Avatar */}
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center shrink-0 shadow-sm">
-                    {group.isPrivate ? (
-                      <Lock className="h-5 w-5 text-white" />
-                    ) : (
-                      <Hash className="h-6 w-6 text-white" />
-                    )}
-                  </div>
-
-                  {/* Group Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-semibold text-slate-900 text-sm truncate">{group.name}</span>
-                      {group.isPrivate && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Private</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 truncate">{group.description}</p>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
-                      <Users className="h-3 w-3" />
-                      {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
-                    </div>
-                  </div>
-
-                  {/* Join Button */}
-                  <form action="/api/groups/join" method="POST" className="shrink-0">
-                    <input type="hidden" name="groupId" value={group.id} />
-                    <Button type="submit" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-xs gap-1.5">
-                      <MessageCircle className="h-3.5 w-3.5" /> Join
-                    </Button>
-                  </form>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* EMPTY STATE */}
-        {allGroups.length === 0 && (
-          <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-2xl bg-white">
-            <div className="h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-              <Users className="h-7 w-7 text-indigo-400" />
-            </div>
-            <p className="font-semibold text-slate-700">No groups yet</p>
-            <p className="text-sm text-slate-400 mt-1">Create the first group and start learning together.</p>
-            <Button className="mt-6 bg-indigo-600 hover:bg-indigo-700 gap-2">
-              <Plus className="h-4 w-4" /> Create a Group
-            </Button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

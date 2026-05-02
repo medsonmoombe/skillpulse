@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { rooms, users, roomBookings } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { connections, rooms, users, roomBookings } from "@/db/schema";
+import { and, eq, or } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
 import { endLiveRoom } from "@/app/actions/room";
 import { cleanupStaleRooms } from "@/app/actions/roomUtils";
@@ -14,6 +14,7 @@ import { KnockScreen } from "@/components/KnockScreen";
 import { RoomShell } from "@/components/RoomShell";
 import { ActiveRoom } from "@/components/ActiveRoom";
 import Link from "next/link";
+import { getGroupMembershipState } from "@/lib/group-governance";
 
 interface RoomPageProps {
   params: Promise<{ id: string }>;
@@ -31,7 +32,9 @@ export default async function RoomPage({ params }: RoomPageProps) {
       livekitRoomId: rooms.livekitRoomId,
       hostName: users.displayName,
       hostId: rooms.hostId,
+      groupId: rooms.groupId,
       status: rooms.status,
+      maxParticipants: rooms.maxParticipants,
       startsAt: rooms.startsAt,
     })
     .from(rooms)
@@ -41,9 +44,33 @@ export default async function RoomPage({ params }: RoomPageProps) {
   if (!room) notFound();
 
   const user = await getCurrentUser();
+  if (!user) {
+    redirect("/dashboard");
+  }
+
   const isHost = user?.id === room.hostId;
 
-  const bookings = await db
+  if (!room.groupId && room.status === "active" && !isHost) {
+    const [friendship] = await db
+      .select({ id: connections.id })
+      .from(connections)
+      .where(
+        and(
+          eq(connections.status, "accepted"),
+          or(
+            and(eq(connections.requesterId, user.id), eq(connections.addresseeId, room.hostId)),
+            and(eq(connections.requesterId, room.hostId), eq(connections.addresseeId, user.id))
+          )
+        )
+      )
+      .limit(1);
+
+    if (!friendship) {
+      notFound();
+    }
+  }
+
+  let bookings = await db
     .select({
       id: roomBookings.id,
       userId: roomBookings.userId,
@@ -53,6 +80,47 @@ export default async function RoomPage({ params }: RoomPageProps) {
     .from(roomBookings)
     .leftJoin(users, eq(roomBookings.userId, users.id))
     .where(eq(roomBookings.roomId, room.id));
+
+  if (room.groupId && !isHost) {
+    const membership = await getGroupMembershipState(room.groupId, user.id);
+    if (membership?.status !== "approved") {
+      redirect("/dashboard/groups");
+    }
+
+    const existingBooking = bookings.find((booking) => booking.userId === user.id);
+    if (!existingBooking) {
+      const maxParticipants = room.maxParticipants ?? 25;
+      if (bookings.length >= maxParticipants) {
+        return (
+          <div className="h-screen flex flex-col bg-slate-50">
+            <nav className="shrink-0 h-14 border-b bg-white flex items-center px-6">
+              <Link href="/dashboard/groups" className="px-4 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold rounded-lg transition-colors">
+                Back to Groups
+              </Link>
+            </nav>
+            <ClosedRoom title={room.title} status="full" />
+          </div>
+        );
+      }
+
+      await db.insert(roomBookings).values({
+        roomId: room.id,
+        userId: user.id,
+        status: room.status === "active" ? "admitted" : "booked",
+      });
+
+      bookings = await db
+        .select({
+          id: roomBookings.id,
+          userId: roomBookings.userId,
+          status: roomBookings.status,
+          userName: users.displayName,
+        })
+        .from(roomBookings)
+        .leftJoin(users, eq(roomBookings.userId, users.id))
+        .where(eq(roomBookings.roomId, room.id));
+    }
+  }
 
   const bookingCount = bookings.length;
   const myBooking = bookings.find((b) => b.userId === user?.id);
@@ -79,7 +147,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
           isHost={isHost}
           roomId={room.id}
           currentBookings={bookingCount}
-          maxParticipants={25}
+          maxParticipants={room.maxParticipants ?? 25}
           hasBooked={hasBooked}
         />
       </div>
@@ -139,12 +207,14 @@ export default async function RoomPage({ params }: RoomPageProps) {
               <ActiveRoom
                 roomId={room.id}
                 livekitRoomId={room.livekitRoomId}
-                currentUserId={user?.id ?? ""}
+                currentUserId={user.id}
+                currentUserName={user.displayName}
+                currentUserRole={user.role}
                 isHost={isHost}
                 admittedUsers={admittedUsers}
               />
             ) : userStatus === "booked" ? (
-              <Lobby roomId={room.id} hostName={room.hostName} userId={user?.id ?? ""} />
+              <Lobby roomId={room.id} hostName={room.hostName} userId={user.id} />
             ) : (
               <KnockScreen roomId={room.id} title={room.title} />
             )}

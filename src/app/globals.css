@@ -128,3 +128,332 @@
     @apply font-sans;
   }
 }
+
+/* SkillPulse Chat Styles (Liveblocks react-ui overrides) */
+.lb-thread {
+  display: flex;
+  flex-direction: column;
+  font-family: inherit;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 0.05);
+}
+
+.lb-thread-comments {
+  padding: 0.75rem 0;
+  background:
+    radial-gradient(circle at top right, rgb(224 231 255 / 0.35), transparent 25%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.lb-thread-composer {
+  background: white;
+  border-top: 1px solid #e2e8f0;
+}
+
+.lb-comment {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.lb-comment:hover { background-color: #f8fafc; }
+
+.lb-comment-header {
+  align-items: center;
+}
+
+.lb-comment-author {
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lb-comment-body {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #0f172a;
+}
+
+.lb-comment-attachments,
+.lb-composer-attachments,
+.lb-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.lb-comment-attachments {
+  margin-top: 0.75rem;
+}
+
+.lb-composer-attachments {
+  padding: 0.25rem 0.75rem 0.75rem;
+}
+
+.lb-comment-attachment,
+.lb-attachment {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(248 250 252 / 0.94)),
+    radial-gradient(circle at top right, rgb(224 231 255 / 0.35), transparent 40%);
+  box-shadow: 0 12px 24px rgb(15 23 42 / 0.06);
+  overflow: hidden;
+}
+
+.lb-attachment {
+  min-width: 13rem;
+  max-width: min(100%, 18rem);
+}
+
+.lb-comment-attachment {
+  max-width: min(100%, 18rem);
+}
+
+.lb-attachment-preview,
+.lb-attachment-preview-media {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.lb-attachment-preview-media {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  width: 100%;
+}
+
+.lb-attachment-details {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.lb-attachment-icon {
+  color: #4f46e5;
+}
+
+.lb-attachment-name {
+  color: #0f172a;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.lb-attachment-description {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.lb-attachment-delete {
+  color: #94a3b8;
+}
+
+.lb-attachment-delete:hover {
+  color: #ef4444;
+}
+
+.lb-comment-date {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.lb-composer {
+  border-top: 1px solid #e2e8f0;
+  padding: 0.75rem 1rem;
+  background-color: white;
+}
+
+.lb-composer-editor-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4);
+}
+
+.lb-composer-editor {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background-color: #f8fafc;
+  min-height: 3rem;
+  font-family: inherit;
+}
+
+.lb-composer-editor-container:focus-within {
+  box-shadow: 0 0 0 2px #818cf8;
+  border-color: transparent;
+}
+
+.lb-composer-footer {
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.lb-composer-attachments-drop-area {
+  margin: 0.75rem 0.75rem 0;
+  border: 1px dashed #cbd5e1;
+  border-radius: 1rem;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.lb-composer-attachments-drop-area-label {
+  display: block;
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.lb-composer-action {
+  border-radius: 0.75rem;
+}
+
+.lb-composer-submit {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background-color: #4f46e5;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.lb-composer-submit:hover { background-color: #4338ca; }
+.lb-composer-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* SkillPulse Chat Bubble Overrides */
+.lb-thread-chat .lb-thread {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Composer input bar — WhatsApp style */
+.lb-composer {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0.25rem 0 !important;
+}
+
+.lb-composer-editor {
+  background: transparent !important;
+  border: none !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: #0f172a !important;
+  min-height: 1.5rem !important;
+  max-height: 120px !important;
+  overflow-y: auto !important;
+  padding: 0.375rem 0.5rem !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.lb-composer-editor [data-placeholder]::before {
+  color: #94a3b8 !important;
+  font-size: 0.875rem !important;
+}
+
+.lb-composer-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem 0.25rem 0 !important;
+}
+
+.lb-composer-submit {
+  background: #4f46e5 !important;
+  color: white !important;
+  border-radius: 0.75rem !important;
+  padding: 0.375rem 0.875rem !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+.lb-composer-submit:hover {
+  background: #4338ca !important;
+}
+
+.lb-composer-submit:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.lb-composer-attach-files {
+  color: #94a3b8 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0.25rem !important;
+  cursor: pointer !important;
+  border-radius: 0.5rem !important;
+  transition: color 0.15s, background 0.15s !important;
+}
+
+.lb-composer-attach-files:hover {
+  color: #4f46e5 !important;
+  background: #eef2ff !important;
+}
+
+.lb-thread-chat .lb-comment {
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+}
+
+.lb-thread-chat .lb-comment-header {
+  display: none;
+}
+
+.lb-thread-chat .lb-comment-body {
+  display: inline-block;
+  max-width: 75%;
+  background: #f1f5f9;
+  color: #0f172a;
+  border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.lb-thread-chat .lb-comment[data-self="true"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.lb-thread-chat .lb-comment[data-self="true"] .lb-comment-body {
+  background: #4f46e5;
+  color: white;
+  border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+}
+
+.lb-thread-chat .lb-comment-date {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+  padding: 0 0.25rem;
+}
+
+.lb-thread-chat .lb-attachment {
+  max-width: 280px;
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.lb-thread-chat .lb-attachment img {
+  width: 100%;
+  height: auto;
+  display: block;
+}

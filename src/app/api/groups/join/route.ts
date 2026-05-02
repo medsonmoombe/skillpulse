@@ -1,7 +1,9 @@
 import { db } from "@/db";
-import { groupMemberships } from "@/db/schema";
+import { groups } from "@/db/schema";
 import { getCurrentUser } from "@/lib/currentUser";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { requestOrJoinGroup } from "@/lib/group-governance";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -17,17 +19,18 @@ export async function POST(req: Request) {
     return NextResponse.redirect("/dashboard/groups");
   }
 
-  try {
-    await db.insert(groupMemberships).values({
-      groupId: groupId,
-      userId: user.id,
-      role: "member",
-    });
-  } catch (error) {
-    // Ignore unique violation (user is already a member)
-    console.error("Failed to join group:", error);
+  const [group] = await db
+    .select({
+      slug: groups.slug,
+    })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+
+  if (!group) {
+    return NextResponse.redirect(new URL("/dashboard/groups", req.url));
   }
 
-  // Redirect back to the groups page
-  return NextResponse.redirect(new URL("/dashboard/groups", req.url));
+  const result = await requestOrJoinGroup(user.id, groupId);
+  return NextResponse.redirect(new URL(result.redirectPath, req.url));
 }

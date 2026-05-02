@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { ensureUserSettingsRow } from "@/lib/user-settings-compat";
 
 export async function getCurrentUser() {
   // 1. Get the Clerk auth state
@@ -16,6 +17,7 @@ export async function getCurrentUser() {
 
   // 3. If they exist, return them
   if (existingUser) {
+    await ensureUserSettingsRow(existingUser.id);
     return existingUser;
   }
 
@@ -37,6 +39,8 @@ export async function getCurrentUser() {
       avatarUrl: clerkUser.imageUrl,
       role: "learner",
     }).returning();
+
+    await ensureUserSettingsRow(newUser.id);
 
     return newUser;
   } catch (error) {

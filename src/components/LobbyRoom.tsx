@@ -7,6 +7,7 @@ import { useState } from "react";
 import { admitUser, admitAll } from "@/app/actions/admit";
 import { useFormStatus } from "react-dom";
 import { Loader2, UserCheck, Users, CheckCheck } from "lucide-react";
+import { useToast } from "@/components/ui/toast-provider";
 
 type Booking = {
   id: string;
@@ -83,6 +84,7 @@ function AdmitAllButton({ count }: { count: number }) {
 function AdmitPanelInner({ roomId, initialBookings }: { roomId: string; initialBookings: Booking[] }) {
   const [waiting, setWaiting] = useState<Booking[]>(initialBookings.filter(b => b.status === "booked"));
   const [admitted, setAdmitted] = useState<Booking[]>(initialBookings.filter(b => b.status === "admitted"));
+  const { showToast } = useToast();
 
   useEventListener(({ event }: { event: any }) => {
     if (event.type === "KNOCK") {
@@ -99,15 +101,27 @@ function AdmitPanelInner({ roomId, initialBookings }: { roomId: string; initialB
   const handleAdmit = async (formData: FormData) => {
     const userId = formData.get("userId") as string;
     const userName = waiting.find(u => u.userId === userId)?.userName ?? null;
-    await admitUser(formData);
-    setWaiting(prev => prev.filter(u => u.userId !== userId));
-    setAdmitted(prev => [...prev, { id: formData.get("bookingId") as string, userId, status: "admitted", userName }]);
+    try {
+      await admitUser(formData);
+      setWaiting(prev => prev.filter(u => u.userId !== userId));
+      setAdmitted(prev => [...prev, { id: formData.get("bookingId") as string, userId, status: "admitted", userName }]);
+      showToast(`${userName || "Participant"} admitted successfully.`, "success");
+    } catch (error) {
+      console.error("[LobbyRoom] admit error:", error);
+      showToast("Could not admit participant. Please try again.", "error");
+    }
   };
 
   const handleAdmitAll = async (formData: FormData) => {
-    await admitAll(formData);
-    setAdmitted(prev => [...prev, ...waiting.map(u => ({ ...u, status: "admitted" }))]);
-    setWaiting([]);
+    try {
+      await admitAll(formData);
+      setAdmitted(prev => [...prev, ...waiting.map(u => ({ ...u, status: "admitted" }))]);
+      setWaiting([]);
+      showToast("All waiting participants were admitted.", "success");
+    } catch (error) {
+      console.error("[LobbyRoom] admitAll error:", error);
+      showToast("Could not admit participants. Please try again.", "error");
+    }
   };
 
   return (
@@ -134,10 +148,10 @@ function AdmitPanelInner({ roomId, initialBookings }: { roomId: string; initialB
           waiting.map(booking => (
             <div key={booking.userId} className="flex items-center justify-between bg-slate-800 border border-slate-700 px-3 py-2.5 rounded-xl">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-7 w-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <a href={`/profile/${booking.userId}`} className="h-7 w-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity">
                   <span className="text-xs font-bold text-amber-400">{(booking.userName || "?").charAt(0).toUpperCase()}</span>
-                </div>
-                <span className="text-sm text-slate-200 truncate">{booking.userName || "A Learner"}</span>
+                </a>
+                <a href={`/profile/${booking.userId}`} className="text-sm text-slate-200 truncate hover:text-indigo-300 transition-colors">{booking.userName || "A Learner"}</a>
               </div>
               <form action={handleAdmit}>
                 <input type="hidden" name="bookingId" value={booking.id} />
