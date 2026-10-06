@@ -1,0 +1,222 @@
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '2218676733'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}
+[CLERK-DEBUG] assertSingleChild failed for SignUpButton isArray= false typeof= object count= 1 inspect= {
+  '$$typeof': Symbol(react.lazy),
+  _payload: Promise {
+    status: 'fulfilled',
+    value: {
+      '$$typeof': Symbol(react.transitional.element),
+      type: 'button',
+      key: null,
+      props: [Object],
+      _owner: [Object],
+      _store: {}
+    },
+    reason: null,
+    _children: [],
+    _debugChunk: null,
+    _debugInfo: []
+  },
+  _init: [Function: readChunk],
+  _debugInfo: [],
+  _store: { validated: 1 }
+} stack= Error: trace
+    at C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\.next\dev\server\chunks\ssr\node_modules_@clerk_react_dist_09ii4bg._.js:172:31
+    at SignUpButton.component (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\.next\dev\server\chunks\ssr\node_modules_@clerk_react_dist_09ii4bg._.js:3861:229)
+    at Object.react_stack_bottom_frame (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:311311)
+    at renderWithHooks (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:118339)
+    at renderElement (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:133011)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at finishFunctionComponent (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:119349)
+    at renderElement (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:134520)
+    at renderElement (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:194974)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202325)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderChildrenArray (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:207654)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202417)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderElement (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:181773)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202325)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderChildrenArray (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:207654)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202417)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderElement (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:181773)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderChildrenArray (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:207654)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202417)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderElement (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:181773)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderChildrenArray (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:207654)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202417)
+    at renderNodeDestructive (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at retryNode (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202325)
+    at performWork (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:223847)
+    at Immediate._onImmediate (C:\Users\USER\Desktop\my files\PPJ\Senoir level\skillpulse\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:103267)
+    at process.processImmediate (node:internal/timers:491:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '3390237969'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[DB] Transient error on attempt 2/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+[feed] Failed to load feed articles: {
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12',
+  userId: null
+}

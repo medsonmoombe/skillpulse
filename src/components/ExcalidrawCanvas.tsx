@@ -44,7 +44,7 @@ function BoardLayout({
 }: Omit<ExcalidrawCanvasProps, "roomId">) {
   const [showPersonalBoard, setShowPersonalBoard] = useState(false);
   // splitPercent = width % given to the MAIN board (0 = personal full, 100 = main full)
-  const [splitPercent, setSplitPercent] = useState(50);
+  const [splitPercent, setSplitPercent] = useState(68);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const previousSharedBoardUserIdRef = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,7 +93,7 @@ function BoardLayout({
   const openPersonalBoard = useCallback((userId: string) => {
     setViewingUserId(userId);
     setShowPersonalBoard(true);
-    setSplitPercent((p) => (p === 100 ? 50 : p)); // don't stay at "main full"
+    setSplitPercent((p) => (p === 100 ? 68 : p)); // don't stay at "main full"
   }, []);
 
   const handleViewBoard = useCallback((userId: string) => openPersonalBoard(userId), [openPersonalBoard]);
@@ -112,13 +112,13 @@ function BoardLayout({
     setSharedBoardUserId(null);
     setViewingUserId(null);
     setShowPersonalBoard(false);
-    setSplitPercent(50);
+    setSplitPercent(68);
   }, [setSharedBoardUserId]);
 
   const closePersonalBoard = useCallback(() => {
     setShowPersonalBoard(false);
     setViewingUserId(null);
-    setSplitPercent(50);
+    setSplitPercent(68);
   }, []);
 
   // ── Effects ─────────────────────────────────────────────────────────────────
@@ -134,14 +134,16 @@ function BoardLayout({
     } else if (previousSharedBoardUserIdRef.current) {
       setViewingUserId(null);
       setShowPersonalBoard(false);
-      setSplitPercent(50);
+      setSplitPercent(68);
     }
     previousSharedBoardUserIdRef.current = sharedBoardUserId;
   }, [sharedBoardUserId, openPersonalBoard]);
 
   useEffect(() => {
-    if (activeRequestForCurrentUser) openPersonalBoard(currentUserId);
-  }, [activeRequestForCurrentUser, currentUserId, openPersonalBoard]);
+    if (!activeRequestForCurrentUser) return;
+    if (showPersonalBoard && viewingUserId === currentUserId) return;
+    openPersonalBoard(currentUserId);
+  }, [activeRequestForCurrentUser, currentUserId, openPersonalBoard, showPersonalBoard, viewingUserId]);
 
   // ── Drag-to-resize divider ───────────────────────────────────────────────────
   const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
@@ -240,7 +242,7 @@ function BoardLayout({
               } else {
                 setShowPersonalBoard(true);
                 setViewingUserId(null);
-                setSplitPercent(50);
+                setSplitPercent(68);
               }
             }}
             className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-lg transition-colors ${

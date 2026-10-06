@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { MobileDashboardNav } from "@/components/MobileDashboardNav";
 import { NotificationBell } from "@/components/NotificationBell";
-import { Search } from "lucide-react";
+import { SearchModal } from "@/components/SearchModal";
+import { SearchTrigger } from "@/components/SearchTrigger";
 import Link from "next/link";
-import { db } from "@/db";
+import { db, withRetry } from "@/db";
 import { rooms } from "@/db/schema";
 import { and, eq, gte, count as drizzleCount } from "drizzle-orm";
+import { appName } from "@/data/constant";
 
 const LEARNER_DAILY_LIVE_LIMIT = 3;
 
@@ -19,10 +21,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (user.role === "learner") {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const [{ value }] = await db
-      .select({ value: drizzleCount() })
-      .from(rooms)
-      .where(and(eq(rooms.hostId, user.id), gte(rooms.createdAt, startOfDay)));
+    const [{ value }] = await withRetry(() =>
+      db
+        .select({ value: drizzleCount() })
+        .from(rooms)
+        .where(and(eq(rooms.hostId, user.id), gte(rooms.createdAt, startOfDay)))
+    );
     learnerLivesUsedToday = value;
   }
 
@@ -41,18 +45,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="h-16 shrink-0 border-b bg-white flex items-center justify-between px-4 md:px-6 gap-3">
           <div className="md:hidden">
             <span className="text-lg font-extrabold bg-gradient-to-r from-indigo-500 to-purple-500 text-transparent bg-clip-text">
-              SkillPulse
+              {appName}
             </span>
           </div>
-          {/* Search — full width on mobile, fixed on desktop */}
-          <div className="relative flex-1 md:flex-none md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search SkillPulse..."
-              className="w-full h-9 pl-9 pr-4 rounded-lg bg-slate-100 text-sm outline-none focus:ring-2 focus:ring-indigo-400 transition"
-            />
-          </div>
+          <SearchTrigger />
           <div className="flex items-center gap-3 shrink-0">
             <NotificationBell />
             <Link
@@ -74,6 +70,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
 
       <MobileDashboardNav user={user} goLiveDisabled={goLiveDisabled} />
+      <SearchModal />
     </div>
   );
 }

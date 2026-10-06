@@ -1,13 +1,22 @@
-import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
+import { AccessToken } from "livekit-server-sdk";
 import { getCurrentUser } from "@/lib/currentUser";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { rooms, roomBookings } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { rooms } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { getRoomAccess } from "@/lib/room-access";
+import { logSecurityEvent } from "@/lib/security-log";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    await logSecurityEvent({
+      event: "livekit_token_denied",
+      route: "/api/livekit",
+      reason: "unauthorized",
+    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { room: roomId } = await req.json();
   if (!roomId) return NextResponse.json({ error: "Room ID required" }, { status: 400 });
@@ -20,18 +29,28 @@ export async function POST(req: Request) {
   const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
   if (!room) return NextResponse.json({ error: "Room not found" }, { status: 404 });
 
-  const isHost = room.hostId === user.id;
+  const access = await getRoomAccess(user.id, roomId);
+  if (!access.allowed) {
+    await logSecurityEvent({
+      event: "livekit_token_denied",
+      route: "/api/livekit",
+      userId: user.id,
+      targetId: roomId,
+      reason: "forbidden_room_access",
+    });
+    return NextResponse.json({ error: "You do not have access to this room." }, { status: 403 });
+  }
 
-  // Non-hosts must be admitted
-  if (!isHost) {
-    const [booking] = await db
-      .select()
-      .from(roomBookings)
-      .where(and(eq(roomBookings.roomId, roomId), eq(roomBookings.userId, user.id)));
-
-    if (!booking || booking.status !== "admitted") {
-      return NextResponse.json({ error: "You are not admitted to this session yet." }, { status: 403 });
-    }
+  if (!access.isHost && access.bookingStatus !== "admitted") {
+    await logSecurityEvent({
+      event: "livekit_token_denied",
+      route: "/api/livekit",
+      userId: user.id,
+      targetId: roomId,
+      reason: "not_admitted",
+      metadata: { bookingStatus: access.bookingStatus },
+    });
+    return NextResponse.json({ error: "You are not admitted to this session yet." }, { status: 403 });
   }
 
   const at = new AccessToken(apiKey, apiSecret, {

@@ -48,26 +48,36 @@ export function PersonalBoard({
 
     return board.elements ?? [];
   });
+  const files = useStorage((root) => {
+    const boards = (root as any).personalBoards;
+    if (!boards) return {};
+
+    const board = boards[boardOwnerId];
+    if (!board) return {};
+
+    return board.files ?? {};
+  });
 
   const ensureBoard = useMutation(({ storage }) => {
     const boards = (storage as any).get("personalBoards");
     if (!boards?.get(boardOwnerId)) {
-      boards?.set(boardOwnerId, new LiveObject({ elements: [] }));
+      boards?.set(boardOwnerId, new LiveObject({ elements: [], files: {} }));
     }
   }, [boardOwnerId]);
 
-  const updateBoard = useMutation(({ storage }, updated: any[]) => {
+  const updateBoard = useMutation(({ storage }, payload: { elements: any[]; files: Record<string, any> }) => {
     const boards = (storage as any).get("personalBoards");
     if (!boards) return;
 
     let board = boards.get(boardOwnerId);
     if (!board) {
-      board = new LiveObject({ elements: updated });
+      board = new LiveObject({ elements: payload.elements, files: payload.files });
       boards.set(boardOwnerId, board);
       return;
     }
 
-    board.set("elements", updated);
+    board.set("elements", payload.elements);
+    board.set("files", payload.files);
   }, [boardOwnerId]);
 
   useEffect(() => {
@@ -79,39 +89,44 @@ export function PersonalBoard({
   useEffect(() => {
     if (!apiRef.current) return;
 
-    const nextSnapshot = JSON.stringify(elements ?? []);
+    const nextSnapshot = JSON.stringify({ elements: elements ?? [], files: files ?? {} });
     if (nextSnapshot === lastSyncedRef.current) return;
 
     lastSyncedRef.current = nextSnapshot;
     apiRef.current.updateScene({ elements: (elements as any[]) ?? [] });
-  }, [elements]);
+    if (files && Object.keys(files).length > 0) {
+      apiRef.current.addFiles(Object.values(files));
+    }
+  }, [elements, files]);
 
   const handleChange = useCallback(
-    (updated: readonly any[]) => {
+    (updated: readonly any[], _appState: any, nextFiles: any) => {
       if (!isOwner) return;
 
-      const nextSnapshot = JSON.stringify(updated);
+      const payload = {
+        elements: [...updated],
+        files: nextFiles ?? {},
+      };
+      const nextSnapshot = JSON.stringify(payload);
       if (nextSnapshot === lastSyncedRef.current) return;
 
       lastSyncedRef.current = nextSnapshot;
-      updateBoard([...updated]);
+      updateBoard(payload);
     },
     [isOwner, updateBoard]
   );
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-1">
         <div className="flex items-center gap-2">
           <div className={`h-2 w-2 rounded-full ${isOwner ? "bg-indigo-500" : "animate-pulse bg-emerald-500"}`} />
           <span className="text-xs font-semibold text-slate-700">
             {isOwner ? "My Board" : `${ownerName}'s Board`}
           </span>
-          {!isOwner ? (
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-400">
-              Live
-            </span>
-          ) : null}
+          {!isOwner && (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-400">Live</span>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
@@ -140,8 +155,12 @@ export function PersonalBoard({
           excalidrawAPI={(api) => {
             apiRef.current = api;
             const initialElements = (elements as any[]) ?? [];
-            lastSyncedRef.current = JSON.stringify(initialElements);
+            const initialFiles = files as any;
+            lastSyncedRef.current = JSON.stringify({ elements: initialElements, files: initialFiles ?? {} });
             api.updateScene({ elements: initialElements });
+            if (initialFiles && Object.keys(initialFiles).length > 0) {
+              api.addFiles(Object.values(initialFiles));
+            }
             // Force viewers into selection mode so they can zoom/pan but not draw
             if (!isOwner) {
               api.setActiveTool({ type: "selection" });
@@ -149,21 +168,23 @@ export function PersonalBoard({
           }}
           initialData={{
             elements: (elements as any[]) ?? [],
+            files: files as any,
             appState: { viewBackgroundColor: "#fafafa" },
           }}
           UIOptions={{
-            canvasActions: { loadScene: false, export: false as any },
+            canvasActions: { loadScene: false, export: false as any, toggleTheme: false },
+            tools: { image: true },
           }}
           validateEmbeddable={false}
           onChange={handleChange}
           viewModeEnabled={false}
         />
 
-        {!isOwner ? (
+        {/* {!isOwner ? (
           <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-800/80 px-3 py-1.5 text-xs text-white">
             Viewing {ownerName}&apos;s board live
           </div>
-        ) : null}
+        ) : null} */}
       </div>
     </div>
   );

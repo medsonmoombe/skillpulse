@@ -4,12 +4,13 @@ import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BookOpen, Compass, LayoutDashboard, Menu,
-  MessageSquare, PenLine, Settings, Users,
+  BookOpen, Compass, GraduationCap, History, LayoutDashboard, Menu,
+  MessageSquare, PenLine, Settings, Users, UserCheck, Coins,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { GoLiveModal } from "@/components/GoLiveModal";
 import { createClient } from "@liveblocks/client";
+import { appName } from "@/data/constant";
 
 type User = {
   id: string;
@@ -26,15 +27,20 @@ const primaryNavLinks = [
 ];
 
 const secondaryNavLinks = [
-  { href: "/dashboard/settings",     label: "Settings",     icon: Settings, exact: false },
-  { href: "/dashboard/articles/new", label: "Write Article", icon: PenLine,  exact: false },
-  { href: "/",                       label: "Public Feed",   icon: BookOpen, exact: true  },
+  { href: "/dashboard/connections",    label: "Connections",    icon: UserCheck,    exact: false },
+  { href: "/dashboard/learning",       label: "Learning Plans", icon: GraduationCap,exact: false },
+  { href: "/dashboard/session-history",label: "Session History",icon: History,      exact: false },
+  { href: "/dashboard/wallet",         label: "Credits",        icon: Coins,        exact: false },
+  { href: "/dashboard/settings",       label: "Settings",       icon: Settings,     exact: false },
+  { href: "/dashboard/articles/new",   label: "Write Article",  icon: PenLine,      exact: false },
+  { href: "/",                         label: "Public Feed",    icon: BookOpen,     exact: true  },
 ];
 
 export function MobileDashboardNav({ user, goLiveDisabled }: { user: User; goLiveDisabled?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
@@ -49,6 +55,18 @@ export function MobileDashboardNav({ user, goLiveDisabled }: { user: User; goLiv
   };
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport) return;
+
     void fetchUnread();
 
     const client = createClient({ authEndpoint: "/api/liveblocks-auth" });
@@ -70,7 +88,7 @@ export function MobileDashboardNav({ user, goLiveDisabled }: { user: User; goLiv
       clearInterval(interval);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id]);
+  }, [isMobileViewport, user.id]);
 
   useEffect(() => {
     if (pathname.startsWith("/dashboard/messages")) setOpen(false);
@@ -127,7 +145,7 @@ export function MobileDashboardNav({ user, goLiveDisabled }: { user: User; goLiv
               className="top-auto bottom-0 left-0 right-0 max-w-none translate-x-0 translate-y-0 rounded-t-3xl border-x-0 border-b-0 border-t border-slate-200 bg-white p-0 sm:max-w-none"
             >
               <DialogHeader className="border-b border-slate-100 px-5 py-4 text-left">
-                <DialogTitle className="text-lg font-semibold text-slate-950">More from SkillPulse</DialogTitle>
+                <DialogTitle className="text-lg font-semibold text-slate-950">More from {appName}</DialogTitle>
                 <p className="text-sm text-slate-500">
                   Quick access to creation, settings, discovery, and live session tools.
                 </p>

@@ -1,0 +1,42 @@
+
+> skillpulse@0.1.0 dev
+> next dev --turbopack
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.198.7:3000
+- Environments: .env.local, .env
+✓ Ready in 27.2s
+○ Compiling proxy ...
+
+○ Compiling /_not-found/page ...
+ POST /api/v1/auth/register 404 in 36.1s (next.js: 16.5s, proxy.ts: 10.2s, application-code: 9.4s)
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '224389906'
+}
+[DB] Transient error on attempt 1/3, retrying... {
+  code: 'CONNECT_TIMEOUT',
+  message: 'Failed query: select "articles"."id", "articles"."title", "articles"."slug", "articles"."content", "articles"."cover_image_url", "articles"."created_at", "users"."id", "users"."display_name", "users"."avatar_url", "users"."role", "topics"."id", "topics"."name", "expert_profiles"."headline", "user_settings"."discovery_intent" from "articles" left join "users" on "articles"."author_id" = "users"."id" left join "topics" on "articles"."topic_id" = "topics"."id" left join "expert_profiles" on "expert_profiles"."user_id" = "users"."id" left join "user_settings" on "user_settings"."user_id" = "users"."id" where "articles"."published" = $1 order by "articles"."created_at" desc limit $2\n' +
+    'params: true,12'
+}
+⨯ Error: @clerk/react: You've passed multiple children components to <SignUpButton/>. You can only pass a single child component or text.
+    at ignore-listed frames {
+  digest: '224389906'
+}
+ GET / 500 in 24.7s (next.js: 1733ms, proxy.ts: 32ms, application-code: 22.9s)
+ GET / 500 in 16.9s (next.js: 43ms, proxy.ts: 26ms, application-code: 16.8s)
+Compaction failed: Failed to compact database
+
+Caused by:
+    0: Failed to merge database files for family 1
+    1: Failed to write small value block
+    2: Failed to write uncompressed size
+    3: There is not enough space on the disk. (os error 112)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)

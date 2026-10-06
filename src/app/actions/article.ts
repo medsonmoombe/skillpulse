@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/currentUser";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { NotificationService } from "@/services/notification-service";
+import { NotificationService } from "@/services/notificationService";
 
 export async function createArticle(formData: FormData) {
   const user = await getCurrentUser();

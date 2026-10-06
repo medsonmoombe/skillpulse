@@ -1,0 +1,142 @@
+{
+  "stats": [
+    {
+      "value": "5,000+",
+      "label": "Expert Sessions",
+      "description": "Completed this month"
+    },
+    {
+      "value": "24/7",
+      "label": "Always On",
+      "description": "Learning never stops"
+    },
+    {
+      "value": "AI",
+      "label": "Powered Matching",
+      "description": "Smart skill alignment"
+    },
+    {
+      "value": "98%",
+      "label": "Satisfaction Rate",
+      "description": "From verified reviews"
+    }
+  ],
+  "features": [
+    {
+      "icon": "mdi:robot-outline",
+      "title": "AI-Powered Matching",
+      "description": "Our intelligent algorithm pairs you with the perfect expert based on your goals, learning style, and schedule preferences.",
+      "color": "amber"
+    },
+    {
+      "icon": "mdi:video-outline",
+      "title": "Live Sessions",
+      "description": "Real-time video sessions with screen sharing, collaborative whiteboards, and instant feedback loops.",
+      "color": "stone"
+    },
+    {
+      "icon": "mdi:chart-timeline-variant-shimmer",
+      "title": "Progress Tracking",
+      "description": "Visual dashboards and milestone tracking keep you motivated and on track toward your learning goals.",
+      "color": "amber"
+    },
+    {
+      "icon": "mdi:account-group-outline",
+      "title": "Community Circles",
+      "description": "Join focused learning groups, participate in challenges, and grow alongside peers who share your ambitions.",
+      "color": "stone"
+    },
+    {
+      "icon": "mdi:certificate-outline",
+      "title": "Verified Credentials",
+      "description": "Earn blockchain-verified certificates that carry weight with employers and industry leaders worldwide.",
+      "color": "amber"
+    },
+    {
+      "icon": "mdi:clock-fast",
+      "title": "Micro-Learning",
+      "description": "Bite-sized lessons designed for busy schedules. Learn in 5-minute bursts or deep-dive sessions—your pace, your way.",
+      "color": "stone"
+    }
+  ],
+  "howItWorks": [
+    {
+      "number": "01",
+      "icon": "mdi:school-outline",
+      "title": "For Learners",
+      "color": "amber",
+      "popular": false,
+      "steps": [
+        "Tell us your goals and current skill level",
+        "Get AI-matched with the right experts",
+        "Book sessions and start growing",
+        "Track progress and earn credentials"
+      ],
+      "buttonText": "Start Learning →",
+      "buttonStyle": "outline"
+    },
+    {
+      "number": "02",
+      "icon": "mdi:star-circle-outline",
+      "title": "For Experts",
+      "color": "amber",
+      "popular": true,
+      "steps": [
+        "Create your expert profile and set rates",
+        "Receive matched learner requests",
+        "Conduct sessions with our pro tools",
+        "Build reputation and earn on your terms"
+      ],
+      "buttonText": "Become an Expert →",
+      "buttonStyle": "solid"
+    },
+    {
+      "number": "03",
+      "icon": "mdi:forum-outline",
+      "title": "For Community",
+      "color": "stone",
+      "popular": false,
+      "steps": [
+        "Join topic-based learning circles",
+        "Share insights and collaborate on projects",
+        "Participate in challenges and events",
+        "Grow together with accountability partners"
+      ],
+      "buttonText": "Join Community →",
+      "buttonStyle": "outline"
+    }
+  ],
+  "testimonials": [
+    {
+      "rating": 5,
+      "text": "{appName} completely changed how I approach learning. The AI matching connected me with a mentor who understood exactly where I was struggling. Went from junior to mid-level in 4 months.",
+      "author": "Alex Rivera",
+      "role": "Frontend Developer at Stripe",
+      "avatar": "https://picsum.photos/seed/test1/48/48.jpg"
+    },
+    {
+      "rating": 5,
+      "text": "As an expert, I've tried other platforms but {appName} gives me the tools to actually deliver value. The session tools are incredible and the community is genuinely engaged.",
+      "author": "Dr. Maya Patel",
+      "role": "Data Science Expert, 500+ sessions",
+      "avatar": "https://picsum.photos/seed/test2/48/48.jpg"
+    },
+    {
+      "rating": 4.5,
+      "text": "The community circles are game-changing. I found accountability partners who keep me on track, and the micro-learning format fits perfectly into my busy schedule.",
+      "author": "Jordan Kim",
+      "role": "Product Designer at Figma",
+      "avatar": "https://picsum.photos/seed/test3/48/48.jpg"
+    }
+  ],
+  "companies": [
+    "Google",
+    "Microsoft",
+    "Stripe",
+    "Shopify",
+    "Notion",
+    "Figma",
+    "Vercel",
+    "Linear"
+  ]
+}

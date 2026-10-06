@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, withRetry } from "@/db";
 import {
   conversationParticipants,
   conversations,
@@ -522,7 +522,8 @@ export async function markConversationRead(conversationId: string, userId: strin
 
 export async function getUnreadConversationSummary(userId: string): Promise<UnreadConversationSummary> {
   // Single aggregated query instead of loading all conversation previews
-  const result = await db.execute<{ unread_conversations: number; unread_messages: number }>(sql`
+  const result = await withRetry(() =>
+    db.execute<{ unread_conversations: number; unread_messages: number }>(sql`
     select
       count(distinct c.id)::int as unread_conversations,
       count(distinct c.id)::int as unread_messages
@@ -543,7 +544,8 @@ export async function getUnreadConversationSummary(userId: string): Promise<Unre
         cp.last_read_at is null
         or c.last_message_at > cp.last_read_at
       )
-  `);
+  `)
+  );
 
   const row = result[0];
   const unreadConversations = Number(row?.unread_conversations ?? 0);

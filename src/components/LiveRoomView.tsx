@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
-  LiveKitRoom,
-  RoomAudioRenderer,
   useConnectionState,
   useLocalParticipant,
   useParticipants,
 } from "@livekit/components-react";
 import { useBroadcastEvent, useMutation, useStorage } from "@liveblocks/react/suspense";
 import { ConnectionState } from "livekit-client";
-import "@livekit/components-styles";
+
+const LiveKitRoom = dynamic(() => import("@livekit/components-react").then((m) => m.LiveKitRoom), { ssr: false });
+const RoomAudioRenderer = dynamic(() => import("@livekit/components-react").then((m) => m.RoomAudioRenderer), { ssr: false });
 import {
   Hand,
   Heart,

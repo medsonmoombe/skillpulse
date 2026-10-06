@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/components/ui/toast-provider";
+import { appName } from "@/data/constant";
 
 type Topic = { id: string; name: string };
 
@@ -112,7 +113,7 @@ export default function NewArticlePage() {
               </div>
               <h1 className="text-lg font-bold text-slate-900">Write an Article</h1>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">Share your expertise with the SkillPulse community</p>
+            <p className="mt-0.5 text-xs text-slate-500">Share your expertise with the {appName} community</p>
           </div>
         </div>
 

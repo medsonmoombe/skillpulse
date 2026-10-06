@@ -1,8 +1,8 @@
 import { getCurrentUser } from "@/lib/currentUser";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { userTopics, articles, groupMemberships, rooms, users, connections, roomBookings } from "@/db/schema";
-import { eq, desc, and, or } from "drizzle-orm";
+import { userTopics, articles, groupMemberships, rooms, users, connections, roomBookings, conversations, userSettings, expertApplications } from "@/db/schema";
+import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,173 +10,180 @@ import { PenLine, Users, Search, Clock, Zap, BookOpen, Star, ArrowRight, Radio, 
 import Link from "next/link";
 import { JoinRoomButton } from "@/components/JoinRoomButton";
 import { EndSessionInlineButton } from "@/components/EndSessionInlineButton";
-import { cleanupStaleRooms } from "@/app/actions/roomUtils";
-import { ensureMatchSuggestionNotifications } from "@/lib/match-notifications";
 import { getMatchSuggestionsForUser } from "@/lib/matching";
-import { getDirectMessageEligibility } from "@/lib/messaging";
 import { PeopleYouMayKnow } from "@/components/PeopleYouMayKnow";
 import { StartConversationButton } from "@/components/StartConversationButton";
+import { DashboardMaintenance } from "@/components/DashboardMaintenance";
+import { getEffectiveRoomStatus } from "@/lib/room-status";
+import { appName } from "@/data/constant";
+import { LiveLessonsSection } from "@/components/lesson-live/LiveLessonsSection";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
 
-  // Clean up expired scheduled rooms before rendering
-  await cleanupStaleRooms();
-
-  const [topicsData, articlesData, groupsData, acceptedConnections, priorExpertBookings, membershipStates] = await Promise.all([
+  const [topicsData, articlesData, groupsData, acceptedConnections, priorExpertBookings, membershipStates, expertApp] = await Promise.all([
     db.select().from(userTopics).where(eq(userTopics.userId, user.id)),
     db.select().from(articles).where(eq(articles.authorId, user.id)).orderBy(desc(articles.createdAt)).limit(5),
     db.select().from(groupMemberships).where(eq(groupMemberships.userId, user.id)),
     db
       .select({ requesterId: connections.requesterId, addresseeId: connections.addresseeId })
       .from(connections)
-      .where(
-        and(
-          or(eq(connections.requesterId, user.id), eq(connections.addresseeId, user.id)),
-          eq(connections.status, "accepted")
-        )
-      ),
+      .where(and(
+        or(eq(connections.requesterId, user.id), eq(connections.addresseeId, user.id)),
+        eq(connections.status, "accepted")
+      )),
     db
       .select({ hostId: rooms.hostId })
       .from(roomBookings)
       .innerJoin(rooms, eq(roomBookings.roomId, rooms.id))
       .innerJoin(users, eq(users.id, rooms.hostId))
-      .where(
-        and(
-          eq(roomBookings.userId, user.id),
-          eq(users.role, "expert")
-        )
-      ),
-    db.select({ groupId: groupMemberships.groupId, status: groupMemberships.status }).from(groupMemberships).where(eq(groupMemberships.userId, user.id)),
+      .where(and(eq(roomBookings.userId, user.id), eq(users.role, "expert"))),
+    db
+      .select({ groupId: groupMemberships.groupId, status: groupMemberships.status })
+      .from(groupMemberships)
+      .where(eq(groupMemberships.userId, user.id)),
+    user.role === "learner"
+      ? db.select({ status: expertApplications.status }).from(expertApplications).where(eq(expertApplications.userId, user.id)).limit(1)
+      : Promise.resolve([]),
   ]);
 
   if (topicsData.length === 0) redirect("/onboarding");
 
-  // People you may know — users with shared topics, not yet connected
   const myTopicIds = topicsData.map((t) => t.topicId);
-  const existingConnectionIds = myTopicIds.length > 0
-    ? await db
-        .select({ userId: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role })
-        .from(userTopics)
-        .innerJoin(users, eq(users.id, userTopics.userId))
-        .where(and(
-          eq(userTopics.topicId, myTopicIds[0]), // at least one shared topic
-          eq(users.role, "learner"), // show other learners too
-        ))
-        .limit(20)
-    : [];
 
-  // Get existing connections to exclude
-  const myConnections = await db
-    .select({ requesterId: connections.requesterId, addresseeId: connections.addresseeId })
-    .from(connections)
-    .where(or(eq(connections.requesterId, user.id), eq(connections.addresseeId, user.id)));
+  const friendIds = new Set(
+    acceptedConnections.map((c) =>
+      c.requesterId === user.id ? c.addresseeId : c.requesterId
+    )
+  );
+  const expertHostIdsLearnedFrom = new Set(priorExpertBookings.map((b) => b.hostId));
+  const approvedGroupIds = new Set(
+    membershipStates.filter((m) => m.status === "approved").map((m) => m.groupId)
+  );
+
+  // ── People You May Know ──────────────────────────────────────────────────────
+  // Use ALL user topics (not just the first) to find candidates with any overlap.
+  // Exclude self + anyone already connected or with a pending connection.
+  const [allCandidates, myConnections] = await Promise.all([
+    myTopicIds.length > 0
+      ? db
+          .select({ userId: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role })
+          .from(userTopics)
+          .innerJoin(users, eq(users.id, userTopics.userId))
+          .where(and(
+            inArray(userTopics.topicId, myTopicIds),
+            sql`${users.id} != ${user.id}`,
+          ))
+          .limit(60) // over-fetch before dedup
+      : Promise.resolve([]),
+    db
+      .select({ requesterId: connections.requesterId, addresseeId: connections.addresseeId })
+      .from(connections)
+      .where(or(eq(connections.requesterId, user.id), eq(connections.addresseeId, user.id))),
+  ]);
 
   const connectedIds = new Set([
     user.id,
     ...myConnections.map((c) => c.requesterId === user.id ? c.addresseeId : c.requesterId),
   ]);
 
-  const friendIds = new Set(
-    acceptedConnections.map((connection) =>
-      connection.requesterId === user.id ? connection.addresseeId : connection.requesterId
-    )
-  );
-  const expertHostIdsLearnedFrom = new Set(priorExpertBookings.map((booking) => booking.hostId));
-  const approvedGroupIds = new Set(
-    membershipStates.filter((membership) => membership.status === "approved").map((membership) => membership.groupId)
-  );
-
   const peopleYouMayKnow = Array.from(
     new Map(
-      existingConnectionIds
+      allCandidates
         .filter((p) => !connectedIds.has(p.userId))
         .map((p) => [p.userId, p])
     ).values()
   ).slice(0, 8);
 
-  const firstName = user.displayName?.split(" ")[0] || "there";
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const matchSuggestions = await getMatchSuggestionsForUser(user.id, user.role, 4);
+  // ── Match suggestions ────────────────────────────────────────────────────────
+  const matchSuggestions = await getMatchSuggestionsForUser(user.id, user.role, 4, Array.from(connectedIds));
 
-  await ensureMatchSuggestionNotifications(user.id, user.role, matchSuggestions);
+  // ── DM eligibility — single batched query instead of N individual calls ──────
+  // Strategy: check for existing conversations in one query, then apply privacy
+  // rules from already-loaded user settings without extra round-trips.
+  const matchUserIds = matchSuggestions.map((s) => s.userId);
+  const existingConversations = matchUserIds.length > 0
+    ? await db
+        .select({ participantA: conversations.participantA, participantB: conversations.participantB })
+        .from(conversations)
+        .where(and(
+          eq(conversations.type, "direct"),
+          or(
+            and(eq(conversations.participantA, user.id), inArray(conversations.participantB, matchUserIds)),
+            and(eq(conversations.participantB, user.id), inArray(conversations.participantA, matchUserIds)),
+          )
+        ))
+    : [];
 
-  const directMessageEligibility = new Map(
-    await Promise.all(
-      matchSuggestions.map(async (suggestion) => [
-        suggestion.userId,
-        await getDirectMessageEligibility(user.id, suggestion.userId),
-      ] as const)
-    )
+  const existingConversationPartners = new Set(
+    existingConversations.map((c) =>
+      c.participantA === user.id ? c.participantB : c.participantA
+    ).filter((id): id is string => Boolean(id))
   );
 
-  // Fetch active rooms
-  const activeRoomCandidates = await db
-    .select({
-      id: rooms.id,
-      title: rooms.title,
-      hostName: users.displayName,
-      hostId: rooms.hostId,
-      hostRole: users.role,
-      groupId: rooms.groupId,
-      createdAt: rooms.createdAt,
+  const matchUserSettings = matchUserIds.length > 0
+    ? await db
+        .select({ userId: userSettings.userId, allowDirectMessages: userSettings.allowDirectMessages, directMessagePrivacy: userSettings.directMessagePrivacy })
+        .from(userSettings)
+        .where(inArray(userSettings.userId, matchUserIds))
+    : [];
+
+  const settingsMap = new Map(matchUserSettings.map((s) => [s.userId, s]));
+
+  const directMessageEligibility = new Map<string, { allowed: boolean; reason: string | null }>(
+    matchSuggestions.map((s: any) => {
+      // Already have a conversation — always allowed
+      if (existingConversationPartners.has(s.userId)) {
+        return [s.userId, { allowed: true, reason: null }];
+      }
+      const settings = settingsMap.get(s.userId);
+      if (settings?.allowDirectMessages === false || settings?.directMessagePrivacy === "nobody") {
+        return [s.userId, { allowed: false, reason: `${s.displayName} is not accepting messages right now.` }];
+      }
+      return [s.userId, { allowed: true, reason: null }];
     })
-    .from(rooms)
-    .leftJoin(users, eq(rooms.hostId, users.id))
-    .where(eq(rooms.status, "active"))
-    .orderBy(desc(rooms.createdAt))
-    .limit(20);
+  );
+
+  // ── Rooms ────────────────────────────────────────────────────────────────────
+  const [activeRoomCandidates, scheduledRoomCandidates] = await Promise.all([
+    db
+      .select({ id: rooms.id, title: rooms.title, hostName: users.displayName, hostId: rooms.hostId, hostRole: users.role, groupId: rooms.groupId, createdAt: rooms.createdAt })
+      .from(rooms)
+      .leftJoin(users, eq(rooms.hostId, users.id))
+      .where(eq(rooms.status, "active"))
+      .orderBy(desc(rooms.createdAt))
+      .limit(20),
+    db
+      .select({ id: rooms.id, title: rooms.title, hostName: users.displayName, hostId: rooms.hostId, hostRole: users.role, groupId: rooms.groupId, startsAt: rooms.startsAt })
+      .from(rooms)
+      .leftJoin(users, eq(rooms.hostId, users.id))
+      .where(eq(rooms.status, "scheduled"))
+      .orderBy(rooms.startsAt)
+      .limit(20),
+  ]);
 
   const activeRooms = activeRoomCandidates
     .filter((room) => {
-      if (room.hostId === user.id) {
-        return true;
-      }
-
-      if (room.groupId) {
-        return approvedGroupIds.has(room.groupId);
-      }
-
+      if (room.hostId === user.id) return true;
+      if (room.groupId) return approvedGroupIds.has(room.groupId);
       return friendIds.has(room.hostId);
     })
     .slice(0, 5);
 
-  // Fetch upcoming scheduled rooms
-  const scheduledRoomCandidates = await db
-    .select({
-      id: rooms.id,
-      title: rooms.title,
-      hostName: users.displayName,
-      hostId: rooms.hostId,
-      hostRole: users.role,
-      groupId: rooms.groupId,
-      startsAt: rooms.startsAt,
-    })
-    .from(rooms)
-    .leftJoin(users, eq(rooms.hostId, users.id))
-    .where(eq(rooms.status, "scheduled"))
-    .orderBy(rooms.startsAt)
-    .limit(20);
-
   const scheduledRooms = scheduledRoomCandidates
     .filter((room) => {
-      if (room.hostId === user.id) {
-        return true;
-      }
-
-      if (room.groupId) {
-        return approvedGroupIds.has(room.groupId);
-      }
-
-      if (room.hostRole === "expert") {
-        return friendIds.has(room.hostId) || expertHostIdsLearnedFrom.has(room.hostId);
-      }
-
+      if (getEffectiveRoomStatus("scheduled", room.startsAt) !== "scheduled") return false;
+      if (room.hostId === user.id) return true;
+      if (room.groupId) return approvedGroupIds.has(room.groupId);
+      if (room.hostRole === "expert") return friendIds.has(room.hostId) || expertHostIdsLearnedFrom.has(room.hostId);
       return true;
     })
     .slice(0, 5);
+
+  const firstName = user.displayName?.split(" ")[0] || "there";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const stats = [
     { label: "Groups Joined", value: groupsData.length, icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
@@ -193,19 +200,29 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <DashboardMaintenance />
 
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-slate-500 font-medium">{greeting},</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-0.5 sm:text-3xl">{firstName} 👋</h1>
-          <p className="text-slate-500 text-sm mt-1">Here's what's happening on SkillPulse today.</p>
+          <p className="text-slate-500 text-sm mt-1">Here&apos;s what&apos;s happening on {appName} today.</p>
         </div>
-        {user.role === "learner" && (
-          <Button size="sm" className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0 shadow-md shadow-indigo-500/20 gap-2 hover:opacity-90 shrink-0" asChild>
-            <Link href="/dashboard/become-expert"><Zap size={14} /> Become Expert</Link>
-          </Button>
-        )}
+      {user.role === "learner" && (() => {
+          const appStatus = expertApp[0]?.status;
+          if (appStatus === "pending") return (
+            <span className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shrink-0">
+              <Zap size={12} /> Application Under Review
+            </span>
+          );
+          if (appStatus === "approved") return null;
+          return (
+            <Button size="sm" className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0 shadow-md shadow-indigo-500/20 gap-2 hover:opacity-90 shrink-0" asChild>
+              <Link href="/dashboard/become-expert"><Zap size={14} /> Become Expert</Link>
+            </Button>
+          );
+        })()}
       </div>
 
       {/* Role + Stats row */}
@@ -241,6 +258,9 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Live Lessons */}
+      <LiveLessonsSection userId={user.id} userRole={user.role} />
 
       {/* Happening Now */}
       <div>
@@ -369,49 +389,59 @@ export default async function DashboardPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {matchSuggestions.map((suggestion) => {
               const eligibility = directMessageEligibility.get(suggestion.userId);
               return (
-                <div key={suggestion.userId} className="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 hover:border-indigo-200 hover:shadow-sm transition-all">
+                <div key={suggestion.userId} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm transition hover:border-indigo-200 hover:shadow-md">
                   {/* Avatar */}
-                  <Link href={`/profile/${suggestion.userId}`} className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-sky-500 to-cyan-400 text-sm font-semibold text-white hover:opacity-80 transition-opacity">
-                    {suggestion.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={suggestion.avatarUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      suggestion.displayName.charAt(0).toUpperCase()
-                    )}
+                  <Link href={`/profile/${suggestion.userId}`} className="shrink-0 hover:opacity-80 transition-opacity">
+                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-indigo-400 to-purple-500 text-sm font-bold text-white shadow-sm">
+                      {suggestion.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={suggestion.avatarUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        suggestion.displayName.charAt(0).toUpperCase()
+                      )}
+                    </div>
                   </Link>
 
                   {/* Info */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Link href={`/profile/${suggestion.userId}`} className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors truncate">
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/profile/${suggestion.userId}`} className="truncate text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors">
                         {suggestion.displayName}
                       </Link>
-                      <Badge className={`border-0 text-[10px] ${suggestion.role === "expert" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 hover:bg-amber-100"}`}>
+                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                        suggestion.role === "expert" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                      }`}>
                         {suggestion.role}
-                      </Badge>
-                      {suggestion.verificationStatus === "verified" && (
-                        <Badge className="border-0 bg-slate-900 text-white hover:bg-slate-900 text-[10px]">✓</Badge>
-                      )}
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">
+                    <p className="mt-0.5 truncate text-[11px] text-slate-400">
                       {suggestion.headline || suggestion.sharedTopics.slice(0, 2).join(" · ")}
                     </p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {suggestion.sharedTopics.slice(0, 2).map((t) => (
+                        <span key={t} className="rounded-full bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700">{t}</span>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Score + actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-bold text-indigo-600">{suggestion.score}pts</span>
-                    <Link href={`/profile/${suggestion.userId}`} className="text-xs text-slate-500 hover:text-indigo-600 transition-colors">View</Link>
+                  {/* Actions */}
+                  <div className="flex shrink-0 flex-col gap-1.5">
+                    <Link href={`/profile/${suggestion.userId}`}
+                      className="rounded-lg border border-slate-200 px-2.5 py-1 text-center text-[11px] font-semibold text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600">
+                      View
+                    </Link>
                     <StartConversationButton
                       targetUserId={suggestion.userId}
                       label="Message"
                       size="sm"
+                      variant="outline"
                       disabled={eligibility?.allowed === false}
                       disabledReason={eligibility?.reason}
+                      className="px-2.5 py-1 text-[11px]"
                     />
                   </div>
                 </div>

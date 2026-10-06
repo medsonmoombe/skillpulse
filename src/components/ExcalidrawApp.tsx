@@ -32,30 +32,54 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
   const lastSentRef = useRef<string>("");
 
   const elements = useStorage((root) => (root.excalidrawState as any)?.elements ?? []);
+  const files = useStorage((root) => (root as any).excalidrawFiles ?? {});
   const permissions = useStorage((root) => (root as any).permissions);
 
   const canEdit = isHost || permissions?.[currentUserId] === true;
 
-  const updateElements = useMutation(({ storage }, updated: any[]) => {
-    (storage.get("excalidrawState") as any)?.set("elements", updated);
+  const updateScene = useMutation(({ storage }, payload: { elements: any[]; files: Record<string, any> }) => {
+    (storage.get("excalidrawState") as any)?.set("elements", payload.elements);
+    const filesObject = (storage as any).get("excalidrawFiles");
+    if (!filesObject) return;
+
+    const nextFiles = payload.files ?? {};
+    const existingKeys = Object.keys(filesObject.toObject?.() ?? {});
+    const nextKeys = new Set(Object.keys(nextFiles));
+
+    for (const key of existingKeys) {
+      if (!nextKeys.has(key)) {
+        filesObject.delete?.(key);
+      }
+    }
+
+    for (const [key, value] of Object.entries(nextFiles)) {
+      filesObject.set(key, value);
+    }
   }, []);
 
   useEffect(() => {
     if (!apiRef.current) return;
-    const incoming = JSON.stringify(elements);
+    const incoming = JSON.stringify({ elements, files });
     if (incoming === lastSentRef.current) return;
-    apiRef.current.updateScene({ elements: elements as any });
-  }, [elements]);
+    lastSentRef.current = incoming;
+    apiRef.current.updateScene({ elements: elements as any, files: files as any });
+  }, [elements, files]);
 
   const onChange = useCallback(
-    (updated: readonly any[]) => {
+    (updated: readonly any[], _appState: any, nextFiles: any) => {
       if (!canEdit) return;
-      const serialized = JSON.stringify(updated);
+      // Any board change = session is active
+      (window as any).__skillpulseResetActivity?.();
+      const payload = {
+        elements: [...updated],
+        files: nextFiles ?? {},
+      };
+      const serialized = JSON.stringify(payload);
       if (serialized === lastSentRef.current) return;
       lastSentRef.current = serialized;
-      updateElements([...updated]);
+      updateScene(payload);
     },
-    [updateElements, canEdit]
+    [updateScene, canEdit]
   );
 
   useEffect(() => {
@@ -70,7 +94,7 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
         delete window.__skillpulseGetMainBoardScene;
       }
     };
-  }, [elements]);
+  }, [elements, files]);
 
   return (
     <div className="h-full w-full relative">
@@ -78,6 +102,7 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
         excalidrawAPI={(api) => { apiRef.current = api; }}
         initialData={{
           elements: elements as any,
+          files: files as any,
           appState: {
             viewBackgroundColor: "#ffffff",
           },
@@ -86,15 +111,17 @@ export function ExcalidrawApp({ currentUserId, isHost }: ExcalidrawAppProps) {
           canvasActions: {
             loadScene: false,
             export: { saveFileToDisk: true },
+            toggleTheme: false,
           },
+          tools: { image: true },
         }}
         validateEmbeddable={false}
         onChange={onChange}
         viewModeEnabled={!canEdit}
       />
       {/* {!canEdit && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-medium shadow-md border border-amber-200 z-50 pointer-events-none">
-          👁️ View Only — Ask host for control to draw
+        <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-800/80 px-4 py-2 text-xs text-white z-10">
+          View only — ask the host for draw access
         </div>
       )} */}
     </div>

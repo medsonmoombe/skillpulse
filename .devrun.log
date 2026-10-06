@@ -1,0 +1,21 @@
+
+> skillpulse@0.1.0 dev
+> next dev --turbopack
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.198.7:3000
+- Environments: .env.local, .env
+✓ Ready in 19.6s
+○ Compiling proxy ...
+
+○ Compiling / ...
+ GET / 500 in 85s (next.js: 64s, proxy.ts: 2.2s, application-code: 18.7s)
+ GET / 500 in 13.7s (next.js: 68ms, proxy.ts: 19ms, application-code: 13.6s)
+ GET / 500 in 13.4s (next.js: 11ms, proxy.ts: 19ms, application-code: 13.4s)
+ GET / 500 in 13.4s (next.js: 14ms, proxy.ts: 40ms, application-code: 13.4s)
+ GET / 500 in 13.5s (next.js: 19ms, proxy.ts: 25ms, application-code: 13.4s)
+ GET / 500 in 13.3s (next.js: 13ms, proxy.ts: 20ms, application-code: 13.3s)
+ GET / 500 in 13.4s (next.js: 15ms, proxy.ts: 20ms, application-code: 13.3s)
+ GET / 500 in 19.3s (next.js: 2.3s, proxy.ts: 390ms, application-code: 16.6s)
+[?25h

@@ -15,7 +15,13 @@ export async function GET() {
     );
   }
 
-  const summary = await getUnreadConversationSummary(user.id);
+  let summary;
+  try {
+    summary = await getUnreadConversationSummary(user.id);
+  } catch (err) {
+    console.warn("[unread-summary] failed, returning zeros:", (err as Error)?.message);
+    summary = { unreadConversations: 0, unreadMessages: 0 };
+  }
 
   return NextResponse.json(summary);
 }

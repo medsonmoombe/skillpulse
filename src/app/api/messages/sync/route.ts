@@ -10,7 +10,7 @@ import {
   getConversationNotificationRecipients,
   getConversationParticipantIds,
 } from "@/lib/messaging";
-import { NotificationService } from "@/services/notification-service";
+import { NotificationService } from "@/services/notificationService";
 
 const liveblocks = new Liveblocks({
   secret: process.env.LIVEBLOCKS_SECRET_KEY as string,
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const payload = (await request.json()) as {
+  let payload: {
     conversationId?: string;
     threadId?: string;
     body?: CommentBody;
@@ -33,6 +33,12 @@ export async function POST(request: Request) {
       size?: number | null;
     }>;
   };
+
+  try {
+    payload = (await request.json()) as typeof payload;
+  } catch {
+    return NextResponse.json({ error: "Invalid message payload" }, { status: 400 });
+  }
 
   if (!payload.conversationId || !payload.body) {
     return NextResponse.json({ error: "Missing conversationId or body" }, { status: 400 });
@@ -53,6 +59,10 @@ export async function POST(request: Request) {
     type: attachment.type ?? attachment.mimeType ?? null,
   }));
 
+  if (attachments.length > 10) {
+    return NextResponse.json({ error: "Too many attachments" }, { status: 400 });
+  }
+
   const attachmentPreview = buildAttachmentPreview(attachments);
   const combinedPreview = preview
     ? attachmentPreview
@@ -61,29 +71,36 @@ export async function POST(request: Request) {
     : attachmentPreview || "Sent an attachment";
   const previewText =
     combinedPreview.length > 160 ? `${combinedPreview.slice(0, 157)}...` : combinedPreview;
+
+  if (!preview.trim() && attachments.length === 0) {
+    return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
+  }
+
   const now = new Date();
 
-  await db
-    .update(conversations)
-    .set({
-      lastMessagePreview: previewText || "Sent an attachment",
-      lastMessageAt: now,
-      updatedAt: now,
-    })
-    .where(eq(conversations.id, payload.conversationId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(conversations)
+      .set({
+        lastMessagePreview: previewText || "Sent an attachment",
+        lastMessageAt: now,
+        updatedAt: now,
+      })
+      .where(eq(conversations.id, payload.conversationId!));
 
-  await db
-    .update(conversationParticipants)
-    .set({
-      lastSeenAt: now,
-      lastReadAt: now,
-    })
-    .where(
-      and(
-        eq(conversationParticipants.conversationId, payload.conversationId),
-        eq(conversationParticipants.userId, user.id)
-      )
-    );
+    await tx
+      .update(conversationParticipants)
+      .set({
+        lastSeenAt: now,
+        lastReadAt: now,
+      })
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, payload.conversationId!),
+          eq(conversationParticipants.userId, user.id)
+        )
+      );
+  });
 
   const recipients = await getConversationNotificationRecipients(payload.conversationId, user.id);
   const notificationType =

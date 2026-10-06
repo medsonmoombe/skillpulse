@@ -23,6 +23,7 @@ export type GroupSummary = {
 
 export type GroupMembershipRecord = {
   userId: string;
+  username: string | null;
   name: string | null;
   avatar: string | null;
   role: GroupRole;
@@ -315,6 +316,7 @@ export async function listGroupMembers(groupId: string): Promise<GroupMembership
       return await db.execute<GroupMembershipRecord>(sql`
         select
           gm."user_id" as "userId",
+          u."username" as "username",
           u."display_name" as "name",
           u."avatar_url" as "avatar",
           gm."role" as "role",
@@ -336,6 +338,7 @@ export async function listGroupMembers(groupId: string): Promise<GroupMembership
   const rows = await db
     .select({
       userId: groupMemberships.userId,
+      username: users.username,
       name: users.displayName,
       avatar: users.avatarUrl,
       role: groupMemberships.role,

@@ -25,7 +25,8 @@ export type MatchSuggestion = {
 export async function getMatchSuggestionsForUser(
   userId: string,
   role: UserRole,
-  limit = 4
+  limit = 4,
+  excludeUserIds: string[] = []
 ): Promise<MatchSuggestion[]> {
   // 1. Get ALL topics for the current user (both interested + teaches)
   const myTopics = await db
@@ -90,7 +91,8 @@ export async function getMatchSuggestionsForUser(
           inArray(userTopics.topicId, sourceTopicIds),
           eq(userTopics.relationship, relationship),
           eq(users.role, candidateRole),
-          ne(users.id, userId)
+          ne(users.id, userId),
+          ...(excludeUserIds.length > 0 ? [sql`${users.id} != ALL(ARRAY[${sql.join(excludeUserIds.map(id => sql`${id}::uuid`), sql`, `)}])`] : [])
         )
       );
 

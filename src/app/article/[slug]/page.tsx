@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { articles, users, topics, articleInteractions } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import Image from "next/image";
 import { getCurrentUser } from "@/lib/currentUser";
 import { getDirectMessageEligibility } from "@/lib/messaging";
 import { Clock, BookOpen, ArrowLeft, BadgeCheck, Calendar } from "lucide-react";
+import { appName } from "@/data/constant";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     .where(eq(articles.slug, slug));
 
   if (!article) notFound();
+
+  // Increment view count fire-and-forget
+  void db
+    .update(articles)
+    .set({ viewsCount: sql`${articles.viewsCount} + 1` })
+    .where(eq(articles.id, article.id));
 
   // Fetch all interactions for this article
   const allInteractions = await db
@@ -107,14 +114,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               href="/"
               className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-lg font-extrabold text-transparent"
             >
-              SkillPulse
+              {appName}
             </Link>
           </div>
-          {user && (
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm">Dashboard</Button>
-            </Link>
-          )}
         </div>
       </nav>
 

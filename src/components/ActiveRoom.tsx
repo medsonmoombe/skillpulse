@@ -24,14 +24,22 @@ export function ActiveRoom({ roomId, livekitRoomId, currentUserId, currentUserNa
   }>({});
 
   const registerCallbacks = useCallback((cbs: typeof boardCallbacks) => {
-    setBoardCallbacks(cbs);
+    setBoardCallbacks((prev) => {
+      if (
+        prev.onViewBoard === cbs.onViewBoard &&
+        prev.onShareBoard === cbs.onShareBoard &&
+        prev.onRequestShare === cbs.onRequestShare
+      ) {
+        return prev;
+      }
+
+      return cbs;
+    });
   }, []);
 
   return (
-    // Outer container — relative so the side drawer can cover board + toolbar
-    <div className="absolute inset-0 flex flex-col bg-white">
-
-      {/* Board — takes all space above the toolbar */}
+    <div className="flex flex-col w-full h-full">
+      {/* Board — fills all remaining space above the toolbar */}
       <div className="flex-1 relative min-h-0">
         <ExcalidrawCanvas
           roomId={roomId}
@@ -44,21 +52,23 @@ export function ActiveRoom({ roomId, livekitRoomId, currentUserId, currentUserNa
         />
       </div>
 
-      {/* Toolbar — fixed height bar, never overlaps the board */}
-      <RoomToolbar
-        livekitRoomId={livekitRoomId}
-        roomId={roomId}
-        isHost={isHost}
-        showBoardControl={showBoardControl}
-        onBoardControlToggle={() => setShowBoardControl(p => !p)}
-        admittedUsers={admittedUsers}
-        currentUserId={currentUserId}
-        currentUserName={currentUserName}
-        currentUserRole={currentUserRole}
-        onViewBoard={boardCallbacks.onViewBoard}
-        onShareBoard={boardCallbacks.onShareBoard}
-        onRequestShare={boardCallbacks.onRequestShare}
-      />
+      {/* Toolbar — always visible at bottom, never scrolls away */}
+      <div className="shrink-0">
+        <RoomToolbar
+          livekitRoomId={livekitRoomId}
+          roomId={roomId}
+          isHost={isHost}
+          showBoardControl={showBoardControl}
+          onBoardControlToggle={() => setShowBoardControl(p => !p)}
+          admittedUsers={admittedUsers}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          currentUserRole={currentUserRole}
+          onViewBoard={boardCallbacks.onViewBoard}
+          onShareBoard={boardCallbacks.onShareBoard}
+          onRequestShare={boardCallbacks.onRequestShare}
+        />
+      </div>
     </div>
   );
 }

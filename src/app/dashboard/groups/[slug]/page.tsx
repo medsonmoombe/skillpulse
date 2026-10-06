@@ -1,40 +1,44 @@
+import { and, eq } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Clock,
+  Crown,
+  Hash,
+  Lock,
+  MessageSquare,
+  Settings,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { db } from "@/db";
 import { rooms } from "@/db/schema";
 import { getCurrentUser } from "@/lib/currentUser";
-import { and, eq } from "drizzle-orm";
-import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import { GoLiveButton } from "@/components/GoLiveButton";
-import { OpenGroupChatButton } from "@/components/OpenGroupChatButton";
-import { StartConversationButton } from "@/components/StartConversationButton";
-import {
-  ApproveMemberForm,
-  RejectMemberForm,
-  RemoveMemberForm,
-  UpdateRoleForm,
-  GovernanceForm,
-} from "@/components/GroupAdminForms";
 import {
   canUserManageGroup,
   getGroupBySlugWithGovernance,
   getGroupMembershipState,
   listGroupMembers,
 } from "@/lib/group-governance";
-import { getDirectMessageEligibility } from "@/lib/messaging";
+import { GoLiveButton } from "@/components/GoLiveButton";
+import { OpenGroupChatButton } from "@/components/OpenGroupChatButton";
+import { JoinGroupButton } from "@/components/JoinGroupButton";
 import {
-  Users, MessageSquare, Lock, Crown, ChevronRight,
-  ShieldCheck, Settings, Hash, Clock, ArrowLeft,
-} from "lucide-react";
+  ApproveMemberForm,
+  GovernanceForm,
+  RejectMemberForm,
+} from "@/components/GroupAdminForms";
 
 interface GroupPageProps {
   params: Promise<{ slug: string }>;
 }
 
 const ROLE_CONFIG = {
-  admin:     { label: "Admin",  color: "bg-indigo-100 text-indigo-700", icon: Crown       },
-  moderator: { label: "Mod",    color: "bg-purple-100 text-purple-700", icon: ShieldCheck },
-  member:    { label: "Member", color: "bg-slate-100 text-slate-600",   icon: Users       },
+  admin: { label: "Admin", color: "bg-indigo-100 text-indigo-700", icon: Crown },
+  moderator: { label: "Mod", color: "bg-purple-100 text-purple-700", icon: ShieldCheck },
+  member: { label: "Member", color: "bg-slate-100 text-slate-600", icon: Users },
 } as const;
 
 export default async function GroupPage({ params }: GroupPageProps) {
@@ -51,36 +55,20 @@ export default async function GroupPage({ params }: GroupPageProps) {
     canUserManageGroup(group.id, user.id),
   ]);
 
-  if (membershipState?.status !== "approved") redirect("/dashboard/groups");
+  const isApprovedMember = membershipState?.status === "approved";
+  const isPendingMember = membershipState?.status === "pending";
+  const myRole = membershipState?.role ?? "member";
 
-  const myRole = membershipState.role;
-  const approvedMembers = memberships.filter((m) => m.status === "approved");
-  const pendingMembers  = memberships.filter((m) => m.status === "pending");
-
-  const otherIds = Array.from(new Set(
-    approvedMembers.map((m) => m.userId).filter((id) => id !== user.id)
-  ));
-  const eligibilityResults = await Promise.all(
-    otherIds.map(async (id) => [id, await getDirectMessageEligibility(user.id, id)] as const)
-  );
-  const memberEligibility = new Map(eligibilityResults);
+  const approvedMembers = memberships.filter((member) => member.status === "approved");
+  const pendingMembers = memberships.filter((member) => member.status === "pending");
 
   const [activeRoom] = await db
     .select()
     .from(rooms)
     .where(and(eq(rooms.groupId, group.id), eq(rooms.status, "active")));
 
-  const sortedMembers = [...approvedMembers].sort((a, b) => {
-    const order = { admin: 0, moderator: 1, member: 2 };
-    if (a.userId === user.id) return -1;
-    if (b.userId === user.id) return 1;
-    return (order[a.role] ?? 3) - (order[b.role] ?? 3);
-  });
-
   return (
     <div className="space-y-0">
-
-      {/* ── COVER BANNER ── */}
       <div className="relative mb-6 overflow-hidden rounded-3xl">
         {group.coverImageUrl ? (
           <div className="relative h-48 w-full md:h-56">
@@ -107,11 +95,11 @@ export default async function GroupPage({ params }: GroupPageProps) {
                     <Lock className="h-3 w-3" /> Private
                   </span>
                 )}
-                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold backdrop-blur-sm ${
-                  group.joinMode === "approval_required"
-                    ? "bg-amber-500/70 text-white"
-                    : "bg-emerald-500/70 text-white"
-                }`}>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm ${
+                    group.joinMode === "approval_required" ? "bg-amber-500/70" : "bg-emerald-500/70"
+                  }`}
+                >
                   {group.joinMode === "approval_required" ? "Approval required" : "Open entry"}
                 </span>
                 {isAdmin && (
@@ -119,41 +107,73 @@ export default async function GroupPage({ params }: GroupPageProps) {
                     <Crown className="h-3 w-3" /> Admin
                   </span>
                 )}
+                {!isApprovedMember && !isPendingMember && (
+                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+                    Preview
+                  </span>
+                )}
+                {isPendingMember && (
+                  <span className="rounded-full bg-amber-500/70 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+                    Request pending
+                  </span>
+                )}
               </div>
               <h1 className="text-xl font-extrabold text-white drop-shadow-sm md:text-2xl">{group.name}</h1>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-sm">
-              <Users className="h-3.5 w-3.5 text-white" />
+            {/* Members avatar stack — links to members page */}
+            <Link
+              href={`/dashboard/groups/${group.slug}/members`}
+              className="flex shrink-0 items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-sm transition hover:bg-black/50"
+            >
+              <div className="flex -space-x-2">
+                {approvedMembers.slice(0, 4).map((m) => (
+                  <div key={m.userId} className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-white/60 bg-gradient-to-br from-indigo-400 to-purple-500 text-[9px] font-bold text-white">
+                    {m.avatar
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={m.avatar} alt="" className="h-full w-full object-cover" />
+                      : m.name?.charAt(0).toUpperCase() ?? "?"}
+                  </div>
+                ))}
+              </div>
               <span className="text-xs font-semibold text-white">{approvedMembers.length}</span>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* ── QUICK ACTIONS BAR ── */}
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <OpenGroupChatButton
-          groupId={group.id}
-          label="Open Chat"
-          size="sm"
-          className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
-        />
-        {activeRoom ? (
+        {isApprovedMember ? (
+          <OpenGroupChatButton
+            groupId={group.id}
+            label="Open Chat"
+            size="sm"
+            className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+          />
+        ) : isPendingMember ? (
+          <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+            Your join request is awaiting approval
+          </span>
+        ) : (
+          <JoinGroupButton groupId={group.id} joinMode={group.joinMode as "open" | "approval_required"} />
+        )}
+
+        {isApprovedMember && activeRoom ? (
           <Link
             href={`/dashboard/room/${activeRoom.id}`}
             className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
           >
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-            Live — Join
+            Live - Join
           </Link>
-        ) : isAdmin ? (
+        ) : isApprovedMember && isAdmin ? (
           <GoLiveButton groupId={group.id} />
-        ) : (
+        ) : isApprovedMember ? (
           <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
             Only admins can start live rooms
           </span>
-        )}
-        {isAdmin && (
+        ) : null}
+
+        {isApprovedMember && isAdmin && (
           <Link
             href={`/dashboard/groups/${group.slug}/edit`}
             className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600"
@@ -161,24 +181,24 @@ export default async function GroupPage({ params }: GroupPageProps) {
             Edit Group
           </Link>
         )}
+
         <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-500">
           <Hash className="h-3.5 w-3.5" />
-          {group.memberMessagingPolicy === "admins_only" ? "Admins only can message" : "All members can message"}
+          {isApprovedMember
+            ? group.memberMessagingPolicy === "admins_only"
+              ? "Admins only can message"
+              : "All members can message"
+            : "Join to unlock chat and live access"}
         </div>
       </div>
 
-      {/* ── DESCRIPTION ── */}
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="text-sm leading-relaxed text-slate-600">{group.description}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-
-        {/* ── LEFT: MEMBERS ── */}
         <div className="space-y-4">
-
-          {/* Pending requests — admin only */}
-          {isAdmin && pendingMembers.length > 0 && (
+          {isApprovedMember && isAdmin && pendingMembers.length > 0 && (
             <section className="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50 px-5 py-3">
                 <Clock className="h-4 w-4 text-amber-500" />
@@ -191,11 +211,12 @@ export default async function GroupPage({ params }: GroupPageProps) {
                 {pendingMembers.map((member) => (
                   <div key={member.userId} className="flex items-center gap-3 px-5 py-3.5">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-sm font-bold text-white shadow-sm">
-                      {member.avatar
+                      {member.avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={member.avatar} alt="" className="h-full w-full object-cover" />
-                        : member.name?.charAt(0).toUpperCase() ?? "?"
-                      }
+                        <img src={member.avatar} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        member.name?.charAt(0).toUpperCase() ?? "?"
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900">{member.name ?? "Unknown"}</p>
@@ -203,7 +224,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <ApproveMemberForm groupId={group.id} targetUserId={member.userId} />
-                      <RejectMemberForm  groupId={group.id} targetUserId={member.userId} />
+                      <RejectMemberForm groupId={group.id} targetUserId={member.userId} />
                     </div>
                   </div>
                 ))}
@@ -211,96 +232,38 @@ export default async function GroupPage({ params }: GroupPageProps) {
             </section>
           )}
 
-          {/* Members list */}
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
-              <Users className="h-4 w-4 text-slate-400" />
-              <h2 className="text-sm font-bold text-slate-900">Members</h2>
-              <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
-                {approvedMembers.length}
-              </span>
-            </div>
-
-            <div className="divide-y divide-slate-50">
-              {sortedMembers.map((member) => {
-                const isMe      = member.userId === user.id;
-                const isCreator = group.createdBy === member.userId;
-                const roleConf  = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.member;
-                const RoleIcon  = roleConf.icon;
-                const eligibility = memberEligibility.get(member.userId);
-
-                return (
-                  <div key={member.userId} className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar — links to profile */}
-                      <Link href={`/profile/${member.userId}`} className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 text-sm font-bold text-white shadow-sm hover:opacity-90 transition-opacity">
-                        {member.avatar
-                          // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={member.avatar} alt="" className="h-full w-full object-cover" />
-                          : member.name?.charAt(0).toUpperCase() ?? "?"
-                        }
-                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400" />
-                      </Link>
-
-                      {/* Name + role */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Link href={`/profile/${member.userId}`} className="truncate text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors">
-                            {member.name ?? "Unknown"}
-                          </Link>
-                          {isMe && <span className="text-[11px] font-medium text-indigo-500">(you)</span>}
-                          {isCreator && (
-                            <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-600">
-                              <Crown className="h-3 w-3" /> Creator
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-1">
-                          <RoleIcon className={`h-3 w-3 ${roleConf.color.split(" ")[1]}`} />
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${roleConf.color}`}>
-                            {roleConf.label}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Message button */}
-                      {!isMe && (
-                        <StartConversationButton
-                          targetUserId={member.userId}
-                          disabled={eligibility?.allowed === false}
-                          disabledReason={eligibility?.reason}
-                          label="Message"
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0 gap-1.5 text-xs"
-                        />
-                      )}
-                    </div>
-
-                    {/* Admin controls */}
-                    {isAdmin && !isMe && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 pl-[52px]">
-                        <UpdateRoleForm
-                          groupId={group.id}
-                          targetUserId={member.userId}
-                          currentRole={member.role}
-                        />
-                        {!isCreator && (
-                          <RemoveMemberForm groupId={group.id} targetUserId={member.userId} />
-                        )}
-                      </div>
-                    )}
+            <div className="flex items-center gap-3 px-5 py-4">
+              <div className="flex -space-x-2">
+                {approvedMembers.slice(0, 5).map((m) => (
+                  <Link key={m.userId} href={`/profile/${m.username ?? m.userId}`} className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br from-indigo-400 to-purple-500 text-[10px] font-bold text-white">
+                    {m.avatar
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={m.avatar} alt="" className="h-full w-full object-cover" />
+                      : m.name?.charAt(0).toUpperCase() ?? "?"}
+                  </Link>
+                ))}
+                {approvedMembers.length > 5 && (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-bold text-slate-600">
+                    +{approvedMembers.length - 5}
                   </div>
-                );
-              })}
+                )}
+              </div>
+              <Link
+                href={`/dashboard/groups/${group.slug}/members`}
+                className="flex min-w-0 flex-1 items-center gap-3 transition hover:text-indigo-600"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">{approvedMembers.length} Member{approvedMembers.length !== 1 ? "s" : ""}</p>
+                  <p className="text-xs text-slate-400">View all members</p>
+                </div>
+                <Users className="h-4 w-4 shrink-0 text-slate-300" />
+              </Link>
             </div>
           </section>
         </div>
 
-        {/* ── RIGHT SIDEBAR ── */}
         <aside className="space-y-4">
-
-          {/* Chat + Live card */}
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-purple-50 px-5 py-4">
               <div className="flex items-center gap-2">
@@ -308,17 +271,28 @@ export default async function GroupPage({ params }: GroupPageProps) {
                 <p className="text-sm font-bold text-slate-900">Group Chat</p>
               </div>
               <p className="mt-1 text-xs text-slate-500">
-                Live messaging with typing indicators, attachments, and notifications.
+                Live messaging, notifications, and collaboration for approved members.
               </p>
             </div>
             <div className="space-y-2 p-4">
-              <OpenGroupChatButton
-                groupId={group.id}
-                label="Open group chat"
-                size="sm"
-                className="w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
-              />
-              {activeRoom ? (
+              {isApprovedMember ? (
+                <OpenGroupChatButton
+                  groupId={group.id}
+                  label="Open group chat"
+                  size="sm"
+                  className="w-full gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+                />
+              ) : (
+                <JoinGroupButton
+                  groupId={group.id}
+                  joinMode={group.joinMode as "open" | "approval_required"}
+                  disabled={isPendingMember}
+                  label={isPendingMember ? "Request Pending" : group.joinMode === "approval_required" ? "Request access" : "Join group"}
+                  className="w-full rounded-xl bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                />
+              )}
+
+              {isApprovedMember && activeRoom ? (
                 <Link
                   href={`/dashboard/room/${activeRoom.id}`}
                   className="flex w-full items-center justify-between rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 transition hover:bg-red-100"
@@ -327,22 +301,24 @@ export default async function GroupPage({ params }: GroupPageProps) {
                     <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
                     <span className="text-xs font-semibold text-red-700">Live session active</span>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-red-500" />
                 </Link>
-              ) : isAdmin ? (
+              ) : isApprovedMember && isAdmin ? (
                 <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                   <p className="mb-2 text-xs text-slate-500">No live session running</p>
                   <GoLiveButton groupId={group.id} />
                 </div>
-              ) : (
+              ) : isApprovedMember ? (
                 <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                   <p className="text-xs text-slate-500">Only group admins can create live group sessions.</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Chat and live sessions unlock after you join the group.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Group info */}
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
               <Hash className="h-4 w-4 text-slate-400" />
@@ -350,11 +326,11 @@ export default async function GroupPage({ params }: GroupPageProps) {
             </div>
             <div className="space-y-3 p-4">
               {[
-                { label: "Entry",     value: group.joinMode === "approval_required" ? "Approval required" : "Open entry" },
-                { label: "Messaging", value: group.memberMessagingPolicy === "admins_only" ? "Admins only" : "All members" },
-                { label: "Privacy",   value: group.isPrivate ? "Private" : "Public" },
-                { label: "Members",   value: `${approvedMembers.length} approved` },
-                ...(isAdmin && pendingMembers.length > 0
+                { label: "Entry", value: group.joinMode === "approval_required" ? "Approval required" : "Open entry" },
+                { label: "Messaging", value: isApprovedMember ? (group.memberMessagingPolicy === "admins_only" ? "Admins only" : "All members") : "Members only" },
+                { label: "Privacy", value: group.isPrivate ? "Private" : "Public" },
+                { label: "Members", value: `${approvedMembers.length} approved` },
+                ...(isApprovedMember && isAdmin && pendingMembers.length > 0
                   ? [{ label: "Pending", value: `${pendingMembers.length} request${pendingMembers.length !== 1 ? "s" : ""}` }]
                   : []),
               ].map(({ label, value }) => (
@@ -366,8 +342,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
             </div>
           </div>
 
-          {/* Admin governance controls */}
-          {isAdmin && (
+          {isApprovedMember && isAdmin && (
             <div className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-indigo-100 bg-indigo-50 px-5 py-3">
                 <Settings className="h-4 w-4 text-indigo-500" />
@@ -384,18 +359,18 @@ export default async function GroupPage({ params }: GroupPageProps) {
             </div>
           )}
 
-          {/* My role — non-admins */}
-          {!isAdmin && (
+          {isApprovedMember && !isAdmin && (
             <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Your Role</p>
               {(() => {
-                const conf = ROLE_CONFIG[myRole] ?? ROLE_CONFIG.member;
-                const Icon = conf.icon;
+                const roleConfig = ROLE_CONFIG[myRole] ?? ROLE_CONFIG.member;
+                const Icon = roleConfig.icon;
+
                 return (
                   <div className="flex items-center gap-2">
-                    <Icon className={`h-4 w-4 ${conf.color.split(" ")[1]}`} />
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${conf.color}`}>
-                      {conf.label}
+                    <Icon className={`h-4 w-4 ${roleConfig.color.split(" ")[1]}`} />
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${roleConfig.color}`}>
+                      {roleConfig.label}
                     </span>
                   </div>
                 );

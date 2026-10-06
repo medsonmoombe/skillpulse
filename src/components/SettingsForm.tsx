@@ -1,17 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Save } from "lucide-react";
 import { updateUserSettings } from "@/app/actions/settings";
 import { initialSettingsActionState, type SettingsActionState } from "@/app/actions/settings-types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useActionToast } from "@/lib/use-action-toast";
 import {
   discoveryIntentDescriptions,
   discoveryIntentLabels,
   type DiscoveryIntent,
 } from "@/lib/discovery-intent";
+import { appName } from "@/data/constant";
 
 type UserSettingsValues = {
   discoveryIntent: DiscoveryIntent | null;
@@ -26,29 +26,96 @@ type UserSettingsValues = {
   searchableProfile: boolean;
 };
 
-function ToggleRow({
+// Animated toggle switch — matches the pattern used in article/group forms
+function Toggle({
+  name,
+  defaultChecked,
+}: {
+  name: string;
+  defaultChecked: boolean;
+}) {
+  const [checked, setChecked] = useState(defaultChecked);
+  return (
+    <>
+      <input type="hidden" name={name} value={checked ? "on" : "off"} />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => setChecked((c) => !c)}
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+          checked ? "bg-indigo-600" : "bg-slate-200"
+        }`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ${
+            checked ? "translate-x-4" : "translate-x-0"
+          }`}
+        />
+      </button>
+    </>
+  );
+}
+
+function SettingRow({
   name,
   title,
   description,
   defaultChecked,
 }: {
-  name: keyof UserSettingsValues;
+  name: string;
   title: string;
   description: string;
   defaultChecked: boolean;
 }) {
   return (
-    <label className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-slate-300">
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-slate-300">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-900">{title}</p>
-        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{description}</p>
       </div>
+      <Toggle name={name} defaultChecked={defaultChecked} />
+    </div>
+  );
+}
+
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="mb-3">
+      <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+      <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+function IntentCard({ value, label, description, defaultChecked }: {
+  value: string;
+  label: string;
+  description: string;
+  defaultChecked: boolean;
+}) {
+  const [checked, setChecked] = useState(defaultChecked);
+  return (
+    <label
+      className={`relative flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition ${
+        checked ? "border-indigo-300 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-slate-300"
+      }`}
+      onClick={() => setChecked(true)}
+    >
       <input
-        type="checkbox"
-        name={name}
-        defaultChecked={defaultChecked}
-        className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+        type="radio"
+        name="discoveryIntent"
+        value={value}
+        checked={checked}
+        onChange={() => setChecked(true)}
+        className="mt-0.5 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
       />
+      <div>
+        <p className={`text-xs font-semibold ${checked ? "text-indigo-900" : "text-slate-900"}`}>{label}</p>
+        <p className={`mt-0.5 text-[11px] leading-relaxed ${checked ? "text-indigo-700" : "text-slate-500"}`}>
+          {description}
+        </p>
+      </div>
     </label>
   );
 }
@@ -61,180 +128,155 @@ export function SettingsForm({ settings }: { settings: UserSettingsValues }) {
   useActionToast(state);
 
   return (
-    <form action={formAction} className="space-y-6">
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg text-slate-950">Discovery intent</CardTitle>
-          <p className="text-sm leading-6 text-slate-500">
-            Tell SkillPulse why you are here so matching and the home experience can prioritize the right people.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <label htmlFor="discoveryIntent" className="block text-sm font-semibold text-slate-900">
-              Primary intent
-            </label>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              Learners use this to describe their goal, and experts use it to describe the kind of people they help best.
-            </p>
-            <select
-              id="discoveryIntent"
-              name="discoveryIntent"
-              defaultValue={settings.discoveryIntent ?? "career_growth"}
-              className="mt-4 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
-            >
-              {Object.entries(discoveryIntentLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {Object.entries(discoveryIntentLabels).map(([value, label]) => (
-                <div key={value} className="rounded-2xl bg-slate-50 px-3 py-3">
-                  <p className="text-sm font-semibold text-slate-900">{label}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {discoveryIntentDescriptions[value as DiscoveryIntent]}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <form action={formAction} className="space-y-8">
 
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg text-slate-950">Messaging</CardTitle>
-          <p className="text-sm leading-6 text-slate-500">
-            Control who can reach you and how live chat behaves inside SkillPulse.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ToggleRow
+      {/* Discovery Intent */}
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <SectionHeader
+            title="Discovery Intent"
+            description={`Tell ${appName} why you're here so matching surfaces the right people.`}
+          />
+          <div className="grid gap-2 sm:grid-cols-2">
+            {Object.entries(discoveryIntentLabels).map(([value, label]) => {
+              const intent = value as DiscoveryIntent;
+              return (
+                <IntentCard
+                  key={intent}
+                  value={intent}
+                  label={label}
+                  description={discoveryIntentDescriptions[intent]}
+                  defaultChecked={settings.discoveryIntent === intent}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Messaging */}
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <SectionHeader
+            title="Messaging"
+            description="Control who can reach you and how live chat behaves."
+          />
+        </div>
+        <div className="divide-y divide-slate-50 px-5 py-3 space-y-0">
+          <SettingRow
             name="allowDirectMessages"
             title="Allow direct messages"
             description="Let other users start a one-to-one conversation with you."
             defaultChecked={settings.allowDirectMessages}
           />
-
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <label htmlFor="directMessagePrivacy" className="block text-sm font-semibold text-slate-900">
-              Direct message privacy
+          <div className="py-3">
+            <label className="block text-sm font-semibold text-slate-900 mb-1.5">
+              Message privacy
             </label>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              Decide whether everyone, only strong matches, or nobody can message you.
-            </p>
             <select
-              id="directMessagePrivacy"
               name="directMessagePrivacy"
               defaultValue={settings.directMessagePrivacy}
-              className="mt-4 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
+              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
             >
-              <option value="everyone">Everyone</option>
+              <option value="everyone">Everyone can message me</option>
               <option value="matches_only">Matches only</option>
               <option value="nobody">Nobody</option>
             </select>
           </div>
-
-          <ToggleRow
+          <SettingRow
             name="showTypingIndicators"
-            title="Show typing indicators"
-            description="Display when people are typing in direct and group conversations."
+            title="Typing indicators"
+            description="Show when people are typing in conversations."
             defaultChecked={settings.showTypingIndicators}
           />
-
-          <ToggleRow
+          <SettingRow
             name="showReadReceipts"
-            title="Show read receipts"
-            description="Allow the app to show when you have seen messages."
+            title="Read receipts"
+            description="Allow others to see when you've read their messages."
             defaultChecked={settings.showReadReceipts}
           />
-
-          <ToggleRow
+          <SettingRow
             name="allowGroupInvites"
-            title="Allow group invites"
-            description="Let people invite you into community groups and future group chats."
+            title="Group invites"
+            description="Let people invite you into community groups."
             defaultChecked={settings.allowGroupInvites}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg text-slate-950">Notifications</CardTitle>
-          <p className="text-sm leading-6 text-slate-500">
-            Choose how SkillPulse keeps you informed about messages, bookings, and matches.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ToggleRow
+      {/* Notifications */}
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <SectionHeader
+            title="Notifications"
+            description={`Choose how ${appName} keeps you informed.`}
+          />
+        </div>
+        <div className="px-5 py-3 space-y-0">
+          <SettingRow
             name="inAppNotifications"
             title="In-app notifications"
-            description="Show activity in the notification drawer inside the dashboard."
+            description="Show activity in the notification bell inside the dashboard."
             defaultChecked={settings.inAppNotifications}
           />
-
-          <ToggleRow
+          <SettingRow
             name="emailNotifications"
             title="Email notifications"
-            description="Receive email updates for important activity when email delivery is added."
+            description="Receive email updates for important activity."
             defaultChecked={settings.emailNotifications}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg text-slate-950">Profile visibility</CardTitle>
-          <p className="text-sm leading-6 text-slate-500">
-            Shape how discoverable you are as we build smarter matching for learners and experts.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <label htmlFor="profileVisibility" className="block text-sm font-semibold text-slate-900">
-              Profile visibility
+      {/* Visibility */}
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <SectionHeader
+            title="Profile Visibility"
+            description={`Control how discoverable you are on ${appName}.`}
+          />
+        </div>
+        <div className="px-5 py-3 space-y-0">
+          <div className="py-3">
+            <label className="block text-sm font-semibold text-slate-900 mb-1.5">
+              Who can see your profile
             </label>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              Public profiles are open to everyone, community profiles are limited to signed-in users, and private
-              profiles stay hidden from discovery.
-            </p>
             <select
-              id="profileVisibility"
               name="profileVisibility"
               defaultValue={settings.profileVisibility}
-              className="mt-4 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
+              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
             >
-              <option value="public">Public</option>
-              <option value="community">Community only</option>
-              <option value="private">Private</option>
+              <option value="public">Public — visible to everyone</option>
+              <option value="community">Community — signed-in users only</option>
+              <option value="private">Private — hidden from discovery</option>
             </select>
           </div>
-
-          <ToggleRow
+          <SettingRow
             name="searchableProfile"
             title="Searchable profile"
-            description="Allow your profile to appear in search results, recommendations, and future matching flows."
+            description="Appear in search results and match recommendations."
             defaultChecked={settings.searchableProfile}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
+      {/* Save */}
       <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Save your preferences</p>
-          <p className="mt-1 text-sm text-slate-500">
-            These settings are the base layer for messaging permissions, notifications, and future discovery.
+          <p className="text-sm font-semibold text-slate-900">Save preferences</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Changes take effect immediately across the platform.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {state.message ? (
-            <p className={`text-sm ${state.success ? "text-emerald-600" : "text-rose-600"}`}>{state.message}</p>
-          ) : null}
-          <Button type="submit" disabled={isPending} className="bg-indigo-600 hover:bg-indigo-700">
-            <Save className="h-4 w-4" />
-            {isPending ? "Saving..." : "Save settings"}
+          {state.message && (
+            <p className={`text-sm ${state.success ? "text-emerald-600" : "text-rose-600"}`}>
+              {state.message}
+            </p>
+          )}
+          <Button type="submit" disabled={isPending} className="gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 shadow-md shadow-indigo-200 hover:opacity-90">
+            <Save className="h-3.5 w-3.5" />
+            {isPending ? "Saving…" : "Save Settings"}
           </Button>
         </div>
       </div>

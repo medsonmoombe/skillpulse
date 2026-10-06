@@ -1,6 +1,5 @@
 "use client";
 
-import { RoomProvider } from "@liveblocks/react/suspense";
 import { useEventListener } from "@liveblocks/react/suspense";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -185,18 +184,10 @@ function AdmitPanelInner({ roomId, initialBookings }: { roomId: string; initialB
 
 // ─── Public exports wrapped in RoomProvider ───────────────────────────────────
 
-export function Lobby({ roomId, hostName, userId }: { roomId: string; hostName: string | null; userId: string }) {
-  return (
-    <RoomProvider id={roomId} initialPresence={{}} initialStorage={{}}>
-      <LobbyInner hostName={hostName} userId={userId} />
-    </RoomProvider>
-  );
+export function Lobby({ roomId: _roomId, hostName, userId }: { roomId: string; hostName: string | null; userId: string }) {
+  return <LobbyInner hostName={hostName} userId={userId} />;
 }
 
 export function AdmitPanel({ roomId, bookings }: { roomId: string; bookings: Booking[] }) {
-  return (
-    <RoomProvider id={roomId} initialPresence={{}} initialStorage={{}}>
-      <AdmitPanelInner roomId={roomId} initialBookings={bookings} />
-    </RoomProvider>
-  );
+  return <AdmitPanelInner roomId={roomId} initialBookings={bookings} />;
 }

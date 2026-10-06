@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "db:baseline": "node scripts/run-sql-migrations.js --baseline",
+    "db:migrate": "node scripts/run-sql-migrations.js",
+    "db:seed": "node scripts/seed-baseline.js",
     "lint": "eslint"
   },
   "dependencies": {

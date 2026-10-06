@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { sendConnectionRequest } from "@/app/actions/connections";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, CheckCircle2 } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { useToast } from "@/components/ui/toast-provider";
+import { appName } from "@/data/constant";
 
 type Person = {
   userId: string;
@@ -17,87 +18,86 @@ type Person = {
 function ConnectBtn() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending}
-      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+    <button
+      type="submit"
+      disabled={pending}
+      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50"
+    >
       {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
-      Connect
+      {pending ? "Sending…" : "Connect"}
     </button>
   );
 }
 
 export function PeopleYouMayKnow({ people }: { people: Person[]; currentUserId: string }) {
-  const [filter, setFilter] = useState<"all" | "learner" | "expert">("all");
   const [connected, setConnected] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
-
-  const filtered = people.filter((p) => filter === "all" || p.role === filter);
 
   if (people.length === 0) return null;
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-900">People You May Know</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Users with shared interests on SkillPulse</p>
-        </div>
-        <div className="flex gap-1.5">
-          {(["all", "learner", "expert"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                filter === f ? "bg-indigo-600 text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-indigo-300"
-              }`}>
-              {f === "all" ? "All" : f === "learner" ? "Learners" : "Experts"}
-            </button>
-          ))}
+          <p className="mt-0.5 text-sm text-slate-500">Users with shared interests on {appName}</p>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-slate-200 py-6 text-center bg-white">
-          <p className="text-sm text-slate-400">No {filter === "all" ? "people" : filter + "s"} to suggest right now</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {filtered.map((person) => (
-            <div key={person.userId} className="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 hover:border-slate-300 transition-all">
-              <Link href={`/profile/${person.userId}`} className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 text-sm font-bold text-white hover:opacity-80 transition-opacity">
+      {/* Horizontal scroll row */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        {people.map((person) => (
+          <div
+            key={person.userId}
+            className="flex w-36 shrink-0 flex-col items-center rounded-3xl border border-slate-200 bg-white p-4  transition hover:border-indigo-200 hover:shadow-md"
+          >
+            <Link href={`/profile/${person.userId}`} className="hover:opacity-80 transition-opacity">
+              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 text-lg font-bold text-white shadow-sm">
                 {person.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={person.avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
                   person.displayName.charAt(0).toUpperCase()
                 )}
-              </Link>
-              <div className="min-w-0 flex-1">
-                <Link href={`/profile/${person.userId}`} className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors truncate block">
-                  {person.displayName}
-                </Link>
-                <span className={`text-[10px] font-semibold capitalize ${person.role === "expert" ? "text-emerald-600" : "text-amber-600"}`}>
-                  {person.role}
-                </span>
               </div>
-              {connected.has(person.userId) ? (
-                <span className="text-xs text-emerald-600 font-semibold">Sent ✓</span>
-              ) : (
-                <form action={async (fd) => {
+            </Link>
+
+            <Link
+              href={`/profile/${person.userId}`}
+              className="mt-2 line-clamp-1 text-center text-xs font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
+            >
+              {person.displayName}
+            </Link>
+            <span className={`mt-0.5 text-[10px] font-medium capitalize ${
+              person.role === "expert" ? "text-emerald-600" : "text-amber-600"
+            }`}>
+              {person.role}
+            </span>
+
+            {connected.has(person.userId) ? (
+              <div className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <CheckCircle2 className="h-3 w-3" /> Sent
+              </div>
+            ) : (
+              <form
+                action={async (fd) => {
                   try {
                     await sendConnectionRequest(fd);
                     setConnected((prev) => new Set([...prev, person.userId]));
-                    showToast(`Connection request sent to ${person.displayName}.`, "success");
-                  } catch (error) {
-                    console.error("[PeopleYouMayKnow] connect error:", error);
-                    showToast("Could not send connection request. Please try again.", "error");
+                    showToast(`Request sent to ${person.displayName}.`, "success");
+                  } catch {
+                    showToast("Could not send request. Try again.", "error");
                   }
-                }}>
-                  <input type="hidden" name="addresseeId" value={person.userId} />
-                  <ConnectBtn />
-                </form>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+                }}
+                className="w-full"
+              >
+                <input type="hidden" name="addresseeId" value={person.userId} />
+                <ConnectBtn />
+              </form>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

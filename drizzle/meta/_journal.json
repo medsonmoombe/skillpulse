@@ -71,6 +71,20 @@
       "when": 1777663222650,
       "tag": "0009_grey_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778368342196,
+      "tag": "0010_chunky_butterfly",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778399453864,
+      "tag": "0011_sleepy_betty_ross",
+      "breakpoints": true
     }
   ]
 }

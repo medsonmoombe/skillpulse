@@ -4,6 +4,21 @@ import { articles, expertProfiles, topics, userSettings, userTopics, users } fro
 import { hasExpertProfileMediaColumns } from "@/lib/expert-profile-compat";
 import { hasDiscoveryIntentColumn } from "@/lib/user-settings-compat";
 
+// Look up a user's UUID by their username
+export async function getUserIdByUsername(username: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+// Check if a string looks like a UUID
+export function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 export async function getDiscoverableProfile(targetUserId: string, viewerUserId?: string | null) {
   const supportsDiscoveryIntent = await hasDiscoveryIntentColumn();
   const supportsProfileMedia = await hasExpertProfileMediaColumns();
@@ -11,6 +26,7 @@ export async function getDiscoverableProfile(targetUserId: string, viewerUserId?
     ? await db
         .select({
           id: users.id,
+          username: users.username,
           displayName: users.displayName,
           avatarUrl: users.avatarUrl,
           bio: users.bio,
@@ -35,6 +51,7 @@ export async function getDiscoverableProfile(targetUserId: string, viewerUserId?
       ? await db
         .select({
           id: users.id,
+          username: users.username,
           displayName: users.displayName,
           avatarUrl: users.avatarUrl,
           bio: users.bio,
@@ -59,6 +76,7 @@ export async function getDiscoverableProfile(targetUserId: string, viewerUserId?
         ? await db
         .select({
           id: users.id,
+          username: users.username,
           displayName: users.displayName,
           avatarUrl: users.avatarUrl,
           bio: users.bio,
@@ -82,6 +100,7 @@ export async function getDiscoverableProfile(targetUserId: string, viewerUserId?
       : await db
         .select({
           id: users.id,
+          username: users.username,
           displayName: users.displayName,
           avatarUrl: users.avatarUrl,
           bio: users.bio,

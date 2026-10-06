@@ -1,5 +1,5 @@
 import type { MatchSuggestion } from "@/lib/matching";
-import { NotificationService } from "@/services/notification-service";
+import { NotificationService } from "@/services/notificationService";
 
 export async function ensureMatchSuggestionNotifications(
   userId: string,
